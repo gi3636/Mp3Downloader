@@ -1,0 +1,529 @@
+/* LibraryPage 组件样式 */
+
+.library-page {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 音乐库加载状态 */
+.library-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 20px;
+  color: var(--text-secondary);
+}
+
+.library-loading p {
+  font-size: 14px;
+}
+
+/* 搜索框 */
+.search-box {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 40px 12px 42px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(11, 18, 32, 0.8);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: all var(--transition);
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.search-input::placeholder {
+  color: var(--muted);
+}
+
+.search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.search-clear:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.search-result-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* 排序和筛选工具栏 */
+.library-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.sort-select {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(11, 18, 32, 0.8);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  min-width: 140px;
+  height: 42px;
+}
+
+.sort-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.library-toolbar .btn {
+  height: 42px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sort-select option {
+  background: var(--card);
+  color: var(--text);
+}
+
+/* 专辑分组 */
+.album-group {
+  margin-bottom: 20px;
+}
+
+.album-group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.album-group-header:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+}
+
+.album-group-cover {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: var(--card);
+  flex-shrink: 0;
+}
+
+.album-group-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.album-group-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 2px;
+  max-width: 100%;
+  line-height: 1.3;
+}
+
+.album-group-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.album-group-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.album-group-header:hover .album-group-toggle {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.album-group-tracks {
+  padding-left: 16px;
+}
+
+/* 专辑布局 */
+.album-layout {
+  display: flex;
+  gap: 20px;
+  height: calc(100vh - 280px);
+  min-height: 400px;
+}
+
+.album-tracks-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(17, 24, 39, 0.5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  overflow: hidden;
+}
+
+.album-tracks-panel .track-list {
+  flex: 1;
+  max-height: none;
+}
+
+.album-tracks-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.album-list-panel {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(17, 24, 39, 0.5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  overflow: hidden;
+}
+
+.album-list-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.album-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.album-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.album-grid::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.album-grid::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent) 0%, #8b5cf6 100%);
+  border-radius: 3px;
+}
+
+.album-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(11, 18, 32, 0.5);
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+}
+
+.album-card:hover {
+  border-color: var(--border-light);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.album-card.active {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.album-card-cover {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: var(--card);
+  flex-shrink: 0;
+}
+
+.album-card-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.album-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.album-card-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-card-count {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* 专辑卡片操作按钮 */
+.album-card-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.album-card:hover .album-card-actions {
+  opacity: 1;
+}
+
+.album-card-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.album-card-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.album-card-btn.danger:hover {
+  background: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* 专辑列表头部 */
+.album-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.album-list-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.album-list-header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* 新建专辑输入框 */
+.new-album-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.new-album-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.new-album-input:focus {
+  outline: none;
+}
+
+/* 专辑编辑状态 */
+.album-card.editing {
+  border-color: var(--accent);
+}
+
+.album-edit-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.album-edit-input:focus {
+  outline: none;
+}
+
+/* 合并选择模式 */
+.album-card.merge-selectable {
+  cursor: pointer;
+}
+
+.album-card.merge-selected {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.merge-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--accent);
+  color: white;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 合并模式提示 */
+.merge-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.merge-mode-bar span {
+  color: var(--text-secondary);
+}
+
+.merge-mode-bar strong {
+  color: var(--accent);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .album-layout {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .album-list-panel {
+    width: 100%;
+    max-height: 300px;
+  }
+  
+  .album-tracks-panel {
+    min-height: 300px;
+  }
+}

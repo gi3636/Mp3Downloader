@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { X, FolderOpen, Save, Loader, ArrowRight, ExternalLink } from 'lucide-react'
+import { X, FolderOpen, Save, Loader, ArrowRight, ExternalLink, Trash2 } from 'lucide-react'
 import * as api from '../api'
+import './SettingsModal.css'
 
 // 检测是否在 Tauri 环境中
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window
@@ -46,6 +47,7 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
   const [migrationInfo, setMigrationInfo] = useState<api.MigrationCheck | null>(null)
   const [migrating, setMigrating] = useState(false)
   const [deleteSource, setDeleteSource] = useState(true)
+  const [cleaning, setCleaning] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -128,6 +130,23 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
     }
   }
 
+  const handleCleanup = async () => {
+    if (!confirm('将整理下载目录中的 hash 命名文件夹，把 MP3 文件移动到对应专辑文件夹。确定继续？')) {
+      return
+    }
+    setCleaning(true)
+    try {
+      const result = await api.cleanupDownloadFolders()
+      if (result.ok) {
+        onToast(`已整理 ${result.moved_count} 首曲目，删除 ${result.deleted_folders} 个空文件夹`, 'success')
+      }
+    } catch (e: any) {
+      onToast(e.message || '整理失败', 'error')
+    } finally {
+      setCleaning(false)
+    }
+  }
+
   if (!open) return null
 
   return (
@@ -176,20 +195,30 @@ export function SettingsModal({ open, onClose, onToast }: SettingsModalProps) {
                   </button>
                 </div>
                 <p className="form-hint">下载的音乐文件将保存到此目录</p>
-                <button
-                  className="btn btn-secondary"
-                  style={{ marginTop: '12px' }}
-                  onClick={async () => {
-                    try {
-                      await api.openDownloadFolder()
-                    } catch (e: any) {
-                      onToast(e.message || '打开目录失败', 'error')
-                    }
-                  }}
-                >
-                  <ExternalLink size={16} />
-                  打开下载目录
-                </button>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={async () => {
+                      try {
+                        await api.openDownloadFolder()
+                      } catch (e: any) {
+                        onToast(e.message || '打开目录失败', 'error')
+                      }
+                    }}
+                  >
+                    <ExternalLink size={16} />
+                    打开目录
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={handleCleanup}
+                    disabled={cleaning}
+                    title="整理 hash 命名的文件夹，将 MP3 移动到正确的专辑文件夹"
+                  >
+                    {cleaning ? <Loader size={16} className="spin" /> : <Trash2 size={16} />}
+                    整理文件夹
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -963,6 +963,8 @@ class JobManager:
         """
         将 MP3 文件从临时目录移动到用户下载目录
         
+        使用播放列表/专辑标题作为文件夹名，而不是 job_id
+        
         Args:
             job_id: 任务 ID
             temp_dir: 临时目录 (JOBS_DIR/job_id)
@@ -970,16 +972,51 @@ class JobManager:
         Returns:
             最终目录路径
         """
-        import shutil
+        import json
         
-        final_dir = get_download_dir() / job_id
+        # 尝试从元数据获取标题作为文件夹名
+        folder_name = job_id  # 默认使用 job_id
+        meta_file = temp_dir / "__meta.json"
+        if meta_file.exists():
+            try:
+                meta = json.loads(meta_file.read_text(encoding="utf-8"))
+                title = meta.get("title")
+                if title:
+                    # 清理文件夹名中的非法字符
+                    folder_name = "".join(c for c in title if c not in r'\/:*?"<>|')
+                    folder_name = folder_name.strip()
+                    if not folder_name:
+                        folder_name = job_id
+            except Exception:
+                pass
+        
+        # 如果临时目录中有子文件夹（播放列表下载的情况），使用子文件夹名
+        subdirs = [d for d in temp_dir.iterdir() if d.is_dir() and not d.name.startswith("__")]
+        if len(subdirs) == 1:
+            folder_name = subdirs[0].name
+        
+        # 确保文件夹名唯一（如果已存在，添加数字后缀）
+        download_dir = get_download_dir()
+        final_dir = download_dir / folder_name
+        if final_dir.exists():
+            counter = 1
+            while (download_dir / f"{folder_name} ({counter})").exists():
+                counter += 1
+            final_dir = download_dir / f"{folder_name} ({counter})"
+        
         final_dir.mkdir(parents=True, exist_ok=True)
         
-        # 移动所有 MP3 文件（保留目录结构）
+        # 移动所有 MP3 文件
         for mp3_file in temp_dir.rglob("*.mp3"):
-            # 计算相对路径
+            # 计算相对路径（跳过播放列表子文件夹层级）
             rel_path = mp3_file.relative_to(temp_dir)
-            dest_path = final_dir / rel_path
+            parts = rel_path.parts
+            
+            # 如果路径是 "播放列表名/文件.mp3"，直接放到根目录
+            if len(parts) == 2 and len(subdirs) == 1:
+                dest_path = final_dir / parts[1]
+            else:
+                dest_path = final_dir / rel_path
             
             # 确保目标目录存在
             dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -995,11 +1032,11 @@ class JobManager:
                     pass
         
         # 复制元数据文件到最终目录
-        for meta_file in ["__meta.json", "__track_thumbnails.json"]:
-            src = temp_dir / meta_file
+        for meta_file_name in ["__meta.json", "__track_thumbnails.json"]:
+            src = temp_dir / meta_file_name
             if src.exists():
                 try:
-                    shutil.copy2(str(src), str(final_dir / meta_file))
+                    shutil.copy2(str(src), str(final_dir / meta_file_name))
                 except Exception:
                     pass
         

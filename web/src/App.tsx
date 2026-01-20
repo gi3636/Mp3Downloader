@@ -16,6 +16,9 @@ import { PlayerControls } from './components/PlayerControls'
 import { SettingsModal } from './components/SettingsModal'
 import { DownloadPage } from './components/DownloadPage'
 import { LibraryPage, type SortMode, type AlbumGroup } from './components/LibraryPage'
+import { AlbumManager } from './components/AlbumManager'
+import { AIClassifyModal } from './components/AIClassifyModal'
+import './App.css'
 
 type Tab = 'download' | 'library'
 
@@ -93,6 +96,12 @@ export default function App() {
 
   // 设置弹窗
   const [settingsOpen, setSettingsOpen] = useState(false)
+  
+  // 专辑管理弹窗
+  const [albumManagerOpen, setAlbumManagerOpen] = useState(false)
+  
+  // AI 分类弹窗
+  const [aiClassifyOpen, setAiClassifyOpen] = useState(false)
 
   // 计算属性
   const libBadgeCount = libTracks.length
@@ -614,6 +623,18 @@ export default function App() {
     setDeleteConfirmTrackId(null)
   }
 
+  // 从专辑移除曲目（移到"未分类"）
+  async function handleRemoveFromAlbum(albumId: string, trackId: string) {
+    if (!confirm('将此曲目从专辑移除（移到"未分类"文件夹）？')) return
+    try {
+      await api.removeTrackFromAlbum(albumId, trackId)
+      pushToast('已从专辑移除', 'success')
+      refreshLibrary()
+    } catch (e: any) {
+      pushToast(e?.message || '移除失败', 'error')
+    }
+  }
+
   // 初始化
   useEffect(() => {
     refreshLibrary()
@@ -623,31 +644,6 @@ export default function App() {
       }
     }
   }, [])
-
-  // 空格键暂停/播放
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 如果焦点在输入框、文本区域或按钮上，不处理空格键
-      const target = e.target as HTMLElement
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'BUTTON' ||
-        target.tagName === 'SELECT' ||
-        target.isContentEditable
-      ) {
-        return
-      }
-
-      if (e.code === 'Space' && libCurrentTrackId) {
-        e.preventDefault()
-        togglePlayPause()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [libCurrentTrackId, togglePlayPause])
 
   // 音频事件监听
   useEffect(() => {
@@ -696,35 +692,48 @@ export default function App() {
     setLibSeeking(false)
   }
 
-  // 键盘快捷键
+  // 全局键盘快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 忽略输入框内的按键
+      // 忽略输入框、按钮等元素内的按键
       const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
-      
-      // 只在有曲目播放时响应
-      if (!libCurrentTrackId) return
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'BUTTON' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      ) return
 
       switch (e.code) {
         case 'Space':
           e.preventDefault()
-          togglePlayPause()
+          if (libCurrentTrackId) {
+            // 有正在播放的曲目，切换播放/暂停
+            togglePlayPause()
+          } else if (currentPlaylist.length > 0) {
+            // 没有播放但有曲目，播放第一首
+            playTrack(currentPlaylist[0])
+          }
           break
         case 'ArrowLeft':
           e.preventDefault()
-          prevTrack()
+          if (libCurrentTrackId) {
+            prevTrack()
+          }
           break
         case 'ArrowRight':
           e.preventDefault()
-          nextTrack()
+          if (libCurrentTrackId) {
+            nextTrack()
+          }
           break
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [libCurrentTrackId])
+  }, [libCurrentTrackId, currentPlaylist])
 
   return (
     <div className="app">
@@ -769,6 +778,23 @@ export default function App() {
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+        onToast={pushToast}
+      />
+
+      {/* 专辑管理弹窗 */}
+      <AlbumManager
+        open={albumManagerOpen}
+        onClose={() => setAlbumManagerOpen(false)}
+        onToast={pushToast}
+        onRefresh={refreshLibrary}
+      />
+
+      {/* AI 分类弹窗 */}
+      <AIClassifyModal
+        open={aiClassifyOpen}
+        tracks={libTracks}
+        onClose={() => setAiClassifyOpen(false)}
+        onComplete={refreshLibrary}
         onToast={pushToast}
       />
 
@@ -847,6 +873,9 @@ export default function App() {
           playingTrackId={libCurrentTrackId}
           onPlayTrack={playTrack}
           onDeleteTrack={handleDeleteLibTrack}
+          onOpenAlbumManager={() => setAlbumManagerOpen(true)}
+          onRemoveFromAlbum={handleRemoveFromAlbum}
+          onOpenAIClassify={() => setAiClassifyOpen(true)}
         />
       )}
 

@@ -1,0 +1,80 @@
+/* TrackSelectModal 组件样式 */
+
+.track-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.track-select-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(11, 18, 32, 0.5);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.track-select-item:hover {
+  border-color: var(--border-light);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.track-select-item.selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.track-select-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid var(--border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+
+.track-select-item.selected .track-select-checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.track-select-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.track-select-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.track-select-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-select-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}

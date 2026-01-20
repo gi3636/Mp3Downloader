@@ -1,0 +1,125 @@
+/* App 组件样式 - 标题、标签页、设置按钮 */
+
+.app {
+  min-height: 100vh;
+  padding-bottom: 100px;
+}
+
+/* 应用标题 */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 16px 16px;
+}
+
+.app-header .header-content {
+  flex: 1;
+  text-align: center;
+}
+
+.app-header h1 {
+  font-size: 32px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+  text-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+}
+
+.app-header p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+.settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+/* 标签页导航 */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: rgba(17, 24, 39, 0.5);
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.tab .badge {
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.tab.active .badge {
+  background: var(--accent);
+}
+
+/* Toast 容器 */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 有悬浮播放器时给页面底部留出空间 */
+.app:has(.floating-player) {
+  padding-bottom: 140px;
+}

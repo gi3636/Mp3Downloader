@@ -245,3 +245,92 @@ export function addTrackToPlaylist(playlistId: string, trackId: string) {
     body: JSON.stringify({ track_id: trackId }),
   })
 }
+
+// 专辑（文件夹）管理 API
+export interface Album {
+  id: string
+  name: string
+  track_count: number
+  cover_url: string | null
+}
+
+export function getAlbums() {
+  return fetchJson<{ albums: Album[] }>('/api/albums')
+}
+
+export function createAlbum(name: string) {
+  return fetchJson<Album>('/api/albums', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+}
+
+export function renameAlbum(albumId: string, name: string) {
+  return fetchJson<Album>(`/api/albums/${encodeURIComponent(albumId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+}
+
+export function deleteAlbum(albumId: string) {
+  return fetchJson<{ ok: boolean }>(`/api/albums/${encodeURIComponent(albumId)}`, { method: 'DELETE' })
+}
+
+export function moveTrackToAlbum(albumId: string, trackId: string) {
+  return fetchJson<{ ok: boolean }>(`/api/albums/${encodeURIComponent(albumId)}/tracks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ track_id: trackId }),
+  })
+}
+
+export function removeTrackFromAlbum(albumId: string, trackId: string) {
+  return fetchJson<{ ok: boolean }>(`/api/albums/${encodeURIComponent(albumId)}/tracks/${encodeURIComponent(trackId)}`, {
+    method: 'DELETE',
+  })
+}
+
+export function mergeAlbums(targetAlbumId: string, sourceAlbumIds: string[]) {
+  return fetchJson<{ ok: boolean; merged_count: number; errors?: string[] }>(`/api/albums/${encodeURIComponent(targetAlbumId)}/merge`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source_ids: sourceAlbumIds }),
+  })
+}
+
+export function cleanupDownloadFolders() {
+  return fetchJson<{ ok: boolean; moved_count: number; deleted_folders: number; errors?: string[] }>('/api/settings/cleanup-downloads', {
+    method: 'POST',
+  })
+}
+
+// AI 分类 API
+export interface ClassifiedTrack {
+  name: string
+  track_id: string
+}
+
+export interface ClassificationResult {
+  [albumName: string]: ClassifiedTrack[]
+}
+
+export function aiClassifyPreview(trackIds: string[], rule: string) {
+  return fetchJson<{ classification: ClassificationResult }>('/api/ai/classify-preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ track_ids: trackIds, rule }),
+    timeout: 600000, // 10 分钟超时
+    retries: 0, // 不重试
+  })
+}
+
+export function aiClassifyExecute(classification: ClassificationResult) {
+  return fetchJson<{ ok: boolean; moved_count: number; errors?: string[] }>('/api/ai/classify-execute', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ classification }),
+    timeout: 600000, // 10 分钟超时
+  })
+}

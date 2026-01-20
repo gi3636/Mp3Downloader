@@ -1,0 +1,115 @@
+/* DownloadProgressCard 组件样式 */
+
+.download-progress-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.download-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.download-progress-cover {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.download-progress-cover-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.download-progress-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.download-progress-title {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.download-progress-status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.download-progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.download-progress-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.download-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.download-progress-fill {
+  height: 100%;
+  background: var(--gradient-success);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.download-progress-pct {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 40px;
+  text-align: right;
+}
+
+.download-progress-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.download-progress-current span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,440 @@
+/* DownloadPage 组件样式 */
+
+.download-page {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.input-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.url-input {
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(11, 18, 32, 0.8);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: all var(--transition);
+}
+
+.url-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.url-input::placeholder {
+  color: var(--muted);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.checkbox-row span {
+  cursor: inherit;
+}
+
+.parsing-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.parsing-hint .spin {
+  color: var(--accent);
+}
+
+.parsing-hint-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.parsing-hint-title {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.parsing-hint-sub {
+  font-size: 12px;
+}
+
+/* 专辑信息 */
+.album-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  margin-bottom: 16px;
+}
+
+.album-cover {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.album-details h3 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.album-details p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 2px 0;
+}
+
+.status-text {
+  color: var(--success);
+}
+
+/* 操作按钮 */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* 下载队列 */
+.download-queue {
+  margin-top: 16px;
+}
+
+.download-queue h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+/* 下载项列表 */
+.download-items-section {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.download-items-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.download-items-header span {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.download-items-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.download-items-actions .muted {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.download-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.download-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(11, 18, 32, 0.5);
+}
+
+.download-item.done {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.download-item.downloading {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.download-item.error {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.download-item.paused {
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.download-item-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.download-item-index {
+  width: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.download-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.download-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.download-item-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.download-item-progress {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.download-item-progress-bar {
+  height: 100%;
+  background: var(--gradient-success);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.download-item-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 60px;
+  text-align: right;
+}
+
+.download-item-action {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.download-item-action:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+/* 任务列表 */
+.job-list-section {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.job-list-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.job-list-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.job-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.job-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  border-bottom: 1px solid var(--border);
+}
+
+.job-item:last-child {
+  border-bottom: none;
+}
+
+.job-item:hover {
+  background: var(--bg-secondary);
+}
+
+.job-item.active {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.job-item-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.job-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.job-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.job-item-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.job-item-status.running {
+  color: var(--accent);
+}
+
+.job-item-status.done {
+  color: var(--success);
+}
+
+.job-item-status.error,
+.job-item-status.canceled {
+  color: var(--danger);
+}
+
+.job-item-progress {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.job-item-time {
+  color: var(--muted);
+}
+
+.job-item-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.job-item:hover .job-item-actions {
+  opacity: 1;
+}
+
+.job-item-action {
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+}
+
+.job-item-action:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.job-item-action.danger:hover {
+  color: var(--danger);
+}

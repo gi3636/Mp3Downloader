@@ -1,6 +1,7 @@
 import type { ChangeEvent } from 'react'
 import { Download, FolderDown, ListMusic, Loader, Trash2, X } from 'lucide-react'
 import type { JobListItem } from '../api'
+import './DownloadPage.css'
 import type { DownloadItem, JobMeta } from '../types'
 import { statusText } from '../utils'
 import { DownloadItemsList } from './DownloadItemsList'
@@ -10,11 +11,11 @@ import { DownloadProgressCard } from './DownloadProgressCard'
 interface DownloadPageProps {
   urlInput: string
   onUrlChange: (value: string) => void
-  tryParsePlaylist: boolean
-  onTryParsePlaylistChange: (value: boolean) => void
+  tryParsePlaylist?: boolean
+  onTryParsePlaylistChange?: (value: boolean) => void
   onStart: () => void
   startLoading: boolean
-  parseStage: string
+  parseStage?: string
   isRunning: boolean
   jobMeta: JobMeta | null
   jobStatus: string
@@ -30,21 +31,21 @@ interface DownloadPageProps {
   onDelete: () => void
   onPauseResume: () => void
   onPauseItem: (index: number, isPaused: boolean) => void
-  allJobs: JobListItem[]
-  onSelectJob: (jobId: string) => void
-  onDeleteJob: (jobId: string) => void
-  onOpenFolder: (jobId: string) => void
-  onCancelJob: (jobId: string) => void
+  allJobs?: JobListItem[]
+  onSelectJob?: (jobId: string) => void
+  onDeleteJob?: (jobId: string) => void
+  onOpenFolder?: (jobId: string) => void
+  onCancelJob?: (jobId: string) => void
 }
 
 export function DownloadPage({
   urlInput,
   onUrlChange,
-  tryParsePlaylist,
+  tryParsePlaylist = false,
   onTryParsePlaylistChange,
   onStart,
   startLoading,
-  parseStage,
+  parseStage = '',
   isRunning,
   jobMeta,
   jobStatus,
@@ -60,7 +61,7 @@ export function DownloadPage({
   onDelete,
   onPauseResume,
   onPauseItem,
-  allJobs,
+  allJobs = [],
   onSelectJob,
   onDeleteJob,
   onOpenFolder,
@@ -89,15 +90,17 @@ export function DownloadPage({
         </button>
       </div>
 
-      <label className="checkbox-row">
-        <input
-          type="checkbox"
-          checked={tryParsePlaylist}
-          onChange={(e) => onTryParsePlaylistChange(e.target.checked)}
-          disabled={startLoading || isRunning}
-        />
-        <span>尝试解析为专辑/播放列表</span>
-      </label>
+      {onTryParsePlaylistChange && (
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={tryParsePlaylist}
+            onChange={(e) => onTryParsePlaylistChange(e.target.checked)}
+            disabled={startLoading || isRunning}
+          />
+          <span>尝试解析为专辑/播放列表</span>
+        </label>
+      )}
 
       {/* 解析中的提示 */}
       {startLoading && !currentJobId && (
@@ -186,14 +189,16 @@ export function DownloadPage({
       )}
 
       {/* 任务列表 */}
-      <JobList
-        jobs={allJobs}
-        currentJobId={currentJobId}
-        onSelectJob={onSelectJob}
-        onDeleteJob={onDeleteJob}
-        onOpenFolder={onOpenFolder}
-        onCancelJob={onCancelJob}
-      />
+      {onSelectJob && onDeleteJob && onOpenFolder && onCancelJob && (
+        <JobList
+          jobs={allJobs}
+          currentJobId={currentJobId}
+          onSelectJob={onSelectJob}
+          onDeleteJob={onDeleteJob}
+          onOpenFolder={onOpenFolder}
+          onCancelJob={onCancelJob}
+        />
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ListPlus, Plus } from 'lucide-react'
 import type { Playlist } from '../api'
+import './PlaylistPicker.css'
 
 interface PlaylistPickerProps {
   open: boolean

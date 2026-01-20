@@ -1,0 +1,112 @@
+/* TrackList 组件样式 */
+
+.track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.track-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(11, 18, 32, 0.5);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.track-item:hover {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.track-item.playing {
+  border-color: var(--success);
+  background: var(--success-light);
+}
+
+.track-cover {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: var(--card);
+  flex-shrink: 0;
+}
+
+.track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.track-title {
+  font-size: 14px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 2px;
+}
+
+.track-duration {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.track-actions {
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.track-item:hover .track-actions {
+  opacity: 1;
+}
+
+.track-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.track-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.track-btn.delete:hover {
+  background: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.track-btn.remove:hover {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.track-status {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--success-light);
+  color: var(--success);
+  font-weight: 500;
+}

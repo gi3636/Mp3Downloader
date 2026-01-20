@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Check, CheckSquare, Download, RefreshCw, Square } from 'lucide-react'
 import type { PlaylistInfo } from '../types'
+import './TrackSelectModal.css'
 import { Modal } from './Modal'
 import { formatDuration } from '../utils'
 import { CoverImage } from './CoverImage'

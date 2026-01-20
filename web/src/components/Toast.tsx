@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle, Info } from 'lucide-react'
+import './Toast.css'
 
 export type ToastType = 'success' | 'error' | 'info'
 

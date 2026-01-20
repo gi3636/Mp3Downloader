@@ -1,6 +1,7 @@
 import { CheckCircle, Download, Loader } from 'lucide-react'
 import type { DownloadItem, JobMeta } from '../types'
 import { statusText } from '../utils'
+import './DownloadProgressCard.css'
 
 interface DownloadProgressCardProps {
   jobMeta: JobMeta | null

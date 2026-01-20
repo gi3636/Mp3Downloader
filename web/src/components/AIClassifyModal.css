@@ -1,0 +1,162 @@
+/* AIClassifyModal 组件样式 */
+
+.ai-classify-modal {
+  width: 90%;
+  max-width: 600px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-classify-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.ai-classify-modal .modal-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+}
+
+.ai-classify-modal .modal-header h3 svg {
+  color: var(--accent);
+}
+
+.ai-classify-modal .step-hint {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.ai-classify-modal .select-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ai-classify-modal .select-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ai-classify-modal .track-select-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.ai-classify-modal .track-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+
+.ai-classify-modal .track-select-item:last-child {
+  border-bottom: none;
+}
+
+.ai-classify-modal .track-select-item:hover {
+  background: var(--bg-secondary);
+}
+
+.ai-classify-modal .track-select-item.selected {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.ai-classify-modal .track-select-item.selected svg {
+  color: var(--accent);
+}
+
+.ai-classify-modal .track-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-classify-modal .rule-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: 14px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.ai-classify-modal .rule-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.ai-classify-modal .rule-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.ai-classify-modal .classification-preview {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.ai-classify-modal .classification-group {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.ai-classify-modal .group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ai-classify-modal .group-header strong {
+  color: var(--accent);
+}
+
+.ai-classify-modal .group-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ai-classify-modal .group-songs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ai-classify-modal .song-tag {
+  font-size: 12px;
+  padding: 4px 8px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+.ai-classify-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+}

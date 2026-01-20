@@ -326,6 +326,81 @@ def cleanup_all_jobs():
     return jsonify(result)
 
 
+@app.post("/api/settings/cleanup-downloads")
+def cleanup_download_folders():
+    """
+    清理下载目录中的 hash 命名文件夹
+    将 MP3 文件移动到以专辑名命名的文件夹，或移到"未分类"
+    """
+    import re
+    import shutil
+    
+    download_dir = get_download_dir()
+    hash_pattern = re.compile(r'^[0-9a-f]{32}$')  # 32位 hex hash
+    
+    moved_count = 0
+    deleted_folders = 0
+    errors = []
+    
+    for folder in list(download_dir.iterdir()):
+        if not folder.is_dir():
+            continue
+        
+        # 检查是否是 hash 命名的文件夹
+        if not hash_pattern.match(folder.name):
+            continue
+        
+        # 读取 job meta 获取专辑名
+        meta_file = folder / "__job_meta.json"
+        album_name = None
+        if meta_file.exists():
+            try:
+                import json
+                meta = json.loads(meta_file.read_text(encoding="utf-8"))
+                album_name = meta.get("title")
+            except Exception:
+                pass
+        
+        # 如果没有专辑名，使用"未分类"
+        if not album_name:
+            album_name = "未分类"
+        
+        # 创建目标文件夹
+        target_dir = download_dir / album_name
+        target_dir.mkdir(exist_ok=True)
+        
+        # 移动所有 MP3 文件
+        for mp3_file in folder.rglob("*.mp3"):
+            dest_file = target_dir / mp3_file.name
+            counter = 1
+            while dest_file.exists():
+                stem = mp3_file.stem
+                suffix = mp3_file.suffix
+                dest_file = target_dir / f"{stem} ({counter}){suffix}"
+                counter += 1
+            
+            try:
+                shutil.move(str(mp3_file), str(dest_file))
+                moved_count += 1
+            except Exception as e:
+                errors.append(f"移动 {mp3_file.name} 失败: {e}")
+        
+        # 删除空的 hash 文件夹
+        try:
+            if folder.exists() and not any(folder.rglob("*.mp3")):
+                shutil.rmtree(folder)
+                deleted_folders += 1
+        except Exception as e:
+            errors.append(f"删除文件夹 {folder.name} 失败: {e}")
+    
+    return jsonify({
+        "ok": True,
+        "moved_count": moved_count,
+        "deleted_folders": deleted_folders,
+        "errors": errors if errors else None,
+    })
+
+
 @app.get("/api/jobs/<job_id>/download")
 def download_job(job_id: str):
     """下载任务的 ZIP 文件"""
@@ -508,6 +583,399 @@ def delete_library_track(track_id: str):
         pass
 
     return jsonify({"ok": True})
+
+
+# ========== API: 专辑（文件夹）管理 ==========
+
+@app.get("/api/albums")
+def list_albums():
+    """获取所有专辑（下载目录中的文件夹）"""
+    download_dir = get_download_dir()
+    albums = []
+    
+    for folder in sorted(download_dir.iterdir()):
+        if not folder.is_dir():
+            continue
+        
+        # 统计 MP3 文件数量
+        mp3_files = list(folder.rglob("*.mp3"))
+        if not mp3_files:
+            continue
+        
+        # 读取元数据获取封面
+        cover_url = None
+        meta_file = folder / "__meta.json"
+        if meta_file.exists():
+            try:
+                import json
+                meta = json.loads(meta_file.read_text(encoding="utf-8"))
+                cover_url = meta.get("thumbnail_url")
+            except Exception:
+                pass
+        
+        albums.append({
+            "id": folder.name,
+            "name": folder.name,
+            "track_count": len(mp3_files),
+            "cover_url": cover_url,
+        })
+    
+    return jsonify({"albums": albums})
+
+
+@app.post("/api/albums")
+def create_album():
+    """创建新专辑（文件夹）"""
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    
+    if not name:
+        return jsonify({"error": "名称不能为空"}), 400
+    
+    # 清理文件夹名中的非法字符
+    safe_name = "".join(c for c in name if c not in r'\/:*?"<>|')
+    if not safe_name:
+        return jsonify({"error": "名称无效"}), 400
+    
+    download_dir = get_download_dir()
+    album_path = download_dir / safe_name
+    
+    if album_path.exists():
+        return jsonify({"error": "专辑已存在"}), 400
+    
+    try:
+        album_path.mkdir(parents=True)
+        return jsonify({
+            "id": safe_name,
+            "name": safe_name,
+            "track_count": 0,
+            "cover_url": None,
+        })
+    except Exception as e:
+        return jsonify({"error": f"创建失败: {e}"}), 500
+
+
+@app.put("/api/albums/<album_id>")
+def rename_album(album_id: str):
+    """重命名专辑"""
+    data = request.get_json() or {}
+    new_name = data.get("name", "").strip()
+    
+    if not new_name:
+        return jsonify({"error": "名称不能为空"}), 400
+    
+    # 清理文件夹名中的非法字符
+    safe_name = "".join(c for c in new_name if c not in r'\/:*?"<>|')
+    if not safe_name:
+        return jsonify({"error": "名称无效"}), 400
+    
+    download_dir = get_download_dir()
+    old_path = download_dir / album_id
+    new_path = download_dir / safe_name
+    
+    if not old_path.exists():
+        return jsonify({"error": "专辑不存在"}), 404
+    
+    if new_path.exists() and old_path != new_path:
+        return jsonify({"error": "目标名称已存在"}), 400
+    
+    try:
+        old_path.rename(new_path)
+        mp3_count = len(list(new_path.rglob("*.mp3")))
+        return jsonify({
+            "id": safe_name,
+            "name": safe_name,
+            "track_count": mp3_count,
+        })
+    except Exception as e:
+        return jsonify({"error": f"重命名失败: {e}"}), 500
+
+
+@app.delete("/api/albums/<album_id>")
+def delete_album(album_id: str):
+    """删除专辑及其所有曲目"""
+    import shutil
+    
+    download_dir = get_download_dir()
+    album_path = download_dir / album_id
+    
+    if not album_path.exists():
+        return jsonify({"error": "专辑不存在"}), 404
+    
+    try:
+        shutil.rmtree(album_path)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": f"删除失败: {e}"}), 500
+
+
+@app.post("/api/albums/<album_id>/tracks")
+def move_track_to_album(album_id: str):
+    """移动曲目到专辑"""
+    data = request.get_json() or {}
+    track_id = data.get("track_id", "")
+    
+    if not track_id:
+        return jsonify({"error": "缺少 track_id"}), 400
+    
+    download_dir = get_download_dir()
+    album_path = download_dir / album_id
+    
+    if not album_path.exists():
+        return jsonify({"error": "专辑不存在"}), 404
+    
+    # 解析曲目路径
+    rel = b64_decode_path(track_id)
+    if not rel:
+        return jsonify({"error": "无效的 track_id"}), 400
+    
+    src_path = resolve_track_path(download_dir, rel)
+    if not src_path:
+        return jsonify({"error": "曲目不存在"}), 404
+    
+    # 移动文件
+    dest_path = album_path / src_path.name
+    if dest_path.exists():
+        return jsonify({"error": "目标位置已存在同名文件"}), 400
+    
+    try:
+        import shutil
+        shutil.move(str(src_path), str(dest_path))
+        
+        # 清理空目录
+        parent = src_path.parent
+        while parent != download_dir and parent.exists() and not any(parent.iterdir()):
+            parent.rmdir()
+            parent = parent.parent
+        
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": f"移动失败: {e}"}), 500
+
+
+@app.delete("/api/albums/<album_id>/tracks/<track_id>")
+def remove_track_from_album(album_id: str, track_id: str):
+    """从专辑移除曲目（移动到根目录的 "未分类" 文件夹）"""
+    import shutil
+    
+    download_dir = get_download_dir()
+    album_path = download_dir / album_id
+    
+    if not album_path.exists():
+        return jsonify({"error": "专辑不存在"}), 404
+    
+    # 解析曲目路径
+    rel = b64_decode_path(track_id)
+    if not rel:
+        return jsonify({"error": "无效的 track_id"}), 400
+    
+    src_path = resolve_track_path(download_dir, rel)
+    if not src_path:
+        return jsonify({"error": "曲目不存在"}), 404
+    
+    # 创建 "未分类" 文件夹
+    unsorted_path = download_dir / "未分类"
+    unsorted_path.mkdir(exist_ok=True)
+    
+    # 移动文件
+    dest_path = unsorted_path / src_path.name
+    counter = 1
+    while dest_path.exists():
+        stem = src_path.stem
+        suffix = src_path.suffix
+        dest_path = unsorted_path / f"{stem} ({counter}){suffix}"
+        counter += 1
+    
+    try:
+        shutil.move(str(src_path), str(dest_path))
+        
+        # 清理空目录
+        parent = src_path.parent
+        while parent != download_dir and parent.exists() and not any(parent.iterdir()):
+            parent.rmdir()
+            parent = parent.parent
+        
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": f"移除失败: {e}"}), 500
+
+
+@app.post("/api/albums/<album_id>/merge")
+def merge_albums(album_id: str):
+    """合并其他专辑到当前专辑"""
+    import shutil
+    
+    data = request.get_json() or {}
+    source_ids = data.get("source_ids", [])
+    
+    if not source_ids:
+        return jsonify({"error": "缺少要合并的专辑"}), 400
+    
+    download_dir = get_download_dir()
+    target_path = download_dir / album_id
+    
+    if not target_path.exists():
+        return jsonify({"error": "目标专辑不存在"}), 404
+    
+    merged_count = 0
+    errors = []
+    
+    for source_id in source_ids:
+        source_path = download_dir / source_id
+        if not source_path.exists():
+            errors.append(f"专辑 {source_id} 不存在")
+            continue
+        
+        if source_path == target_path:
+            continue
+        
+        # 移动所有 MP3 文件
+        for mp3_file in source_path.rglob("*.mp3"):
+            dest_file = target_path / mp3_file.name
+            counter = 1
+            while dest_file.exists():
+                stem = mp3_file.stem
+                suffix = mp3_file.suffix
+                dest_file = target_path / f"{stem} ({counter}){suffix}"
+                counter += 1
+            
+            try:
+                shutil.move(str(mp3_file), str(dest_file))
+                merged_count += 1
+            except Exception as e:
+                errors.append(f"移动 {mp3_file.name} 失败: {e}")
+        
+        # 删除空的源文件夹
+        try:
+            if source_path.exists() and not any(source_path.rglob("*.mp3")):
+                shutil.rmtree(source_path)
+        except Exception:
+            pass
+    
+    return jsonify({
+        "ok": True,
+        "merged_count": merged_count,
+        "errors": errors if errors else None,
+    })
+
+
+# ========== API: AI 分类 ==========
+
+@app.post("/api/ai/classify-preview")
+def ai_classify_preview():
+    """AI 分类预览 - 返回分类结果但不执行"""
+    from ai_service import classify_songs
+    
+    data = request.get_json() or {}
+    track_ids = data.get("track_ids", [])
+    rule = data.get("rule", "").strip()
+    
+    if not track_ids:
+        return jsonify({"error": "请选择要分类的歌曲"}), 400
+    if not rule:
+        return jsonify({"error": "请输入分类规则"}), 400
+    
+    download_dir = get_download_dir()
+    
+    # 获取歌曲名称
+    song_names = []
+    track_map = {}  # 歌曲名 -> track_id
+    
+    for track_id in track_ids:
+        rel = b64_decode_path(track_id)
+        if not rel:
+            continue
+        fp = resolve_track_path(download_dir, rel)
+        if fp:
+            name = fp.stem
+            song_names.append(name)
+            track_map[name] = track_id
+    
+    if not song_names:
+        return jsonify({"error": "未找到有效的歌曲"}), 400
+    
+    try:
+        classification = classify_songs(song_names, rule)
+        
+        # 将分类结果转换为包含 track_id 的格式
+        result = {}
+        for album, songs in classification.items():
+            result[album] = []
+            for song in songs:
+                if song in track_map:
+                    result[album].append({
+                        "name": song,
+                        "track_id": track_map[song]
+                    })
+        
+        return jsonify({"classification": result})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"AI 分类失败: {e}"}), 500
+
+
+@app.post("/api/ai/classify-execute")
+def ai_classify_execute():
+    """执行 AI 分类 - 移动文件到对应专辑"""
+    import shutil
+    
+    data = request.get_json() or {}
+    classification = data.get("classification", {})
+    
+    if not classification:
+        return jsonify({"error": "缺少分类数据"}), 400
+    
+    download_dir = get_download_dir()
+    moved_count = 0
+    errors = []
+    
+    for album_name, tracks in classification.items():
+        if not album_name or album_name == "未分类":
+            continue
+        
+        # 创建专辑文件夹
+        album_dir = download_dir / album_name
+        album_dir.mkdir(exist_ok=True)
+        
+        for track in tracks:
+            track_id = track.get("track_id")
+            if not track_id:
+                continue
+            
+            rel = b64_decode_path(track_id)
+            if not rel:
+                continue
+            
+            src_path = resolve_track_path(download_dir, rel)
+            if not src_path:
+                continue
+            
+            dest_path = album_dir / src_path.name
+            counter = 1
+            while dest_path.exists():
+                stem = src_path.stem
+                suffix = src_path.suffix
+                dest_path = album_dir / f"{stem} ({counter}){suffix}"
+                counter += 1
+            
+            try:
+                shutil.move(str(src_path), str(dest_path))
+                moved_count += 1
+                
+                # 清理空目录
+                parent = src_path.parent
+                while parent != download_dir and parent.exists() and not any(parent.iterdir()):
+                    parent.rmdir()
+                    parent = parent.parent
+            except Exception as e:
+                errors.append(f"移动 {src_path.name} 失败: {e}")
+    
+    return jsonify({
+        "ok": True,
+        "moved_count": moved_count,
+        "errors": errors if errors else None,
+    })
 
 
 # ========== API: 播放列表管理 ==========

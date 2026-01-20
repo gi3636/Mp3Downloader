@@ -1489,6 +1489,12 @@ audio::-webkit-media-controls-timeline {
   color: var(--danger);
 }
 
+.track-btn.remove:hover {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
 .track-status {
   font-size: 11px;
   padding: 4px 8px;
@@ -2851,6 +2857,582 @@ audio::-webkit-media-controls-timeline {
 
 .library-loading p {
   font-size: 14px;
+}
+
+/* 专辑管理弹窗 */
+.album-manager {
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.album-manager .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.album-manager .modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.album-manager .modal-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.album-manager .modal-close:hover {
+  color: var(--text);
+}
+
+.album-manager .create-album-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.album-manager .create-album-row input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
+.album-manager .album-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.album-manager .album-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.album-manager .album-item.selectable {
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.album-manager .album-item.selectable:hover {
+  border-color: var(--accent);
+}
+
+.album-manager .album-item.selected {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.album-manager .album-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.album-manager .album-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.album-manager .album-name {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-manager .album-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.album-manager .album-edit-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.album-manager .album-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.album-manager .icon-btn {
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.album-manager .icon-btn:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.album-manager .icon-btn.danger:hover {
+  color: var(--danger);
+}
+
+.album-manager .check-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.album-manager .merge-hint {
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+}
+
+.album-manager .merge-hint strong {
+  color: var(--accent);
+}
+
+.album-manager .merge-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.album-manager .loading-hint,
+.album-manager .empty-hint {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 20px;
+}
+
+/* 专辑列表内联编辑 */
+.album-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+
+.album-list-header .album-list-title {
+  margin: 0;
+  flex: 1;
+}
+
+.album-list-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.add-album-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all var(--transition);
+}
+
+.add-album-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.new-album-input {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  align-items: center;
+}
+
+.new-album-input input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.new-album-input input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.new-album-input .icon-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.new-album-input .icon-btn.confirm {
+  background: var(--accent);
+  color: white;
+}
+
+.new-album-input .icon-btn.confirm:hover {
+  background: var(--accent-hover);
+}
+
+.new-album-input .icon-btn.cancel {
+  background: var(--bg);
+  color: var(--text-secondary);
+}
+
+.new-album-input .icon-btn.cancel:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* 合并模式提示条 */
+.merge-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+
+.merge-mode-bar .merge-hint {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.merge-mode-bar .merge-hint strong {
+  color: var(--accent);
+}
+
+.merge-mode-bar .merge-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.album-card {
+  position: relative;
+}
+
+.album-card-actions {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.album-card:hover .album-card-actions {
+  opacity: 1;
+}
+
+.album-card-actions .icon-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgba(0, 0, 0, 0.75);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+}
+
+.album-card-actions .icon-btn:hover {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.album-card-actions .icon-btn.danger:hover {
+  color: var(--danger);
+}
+
+.album-card-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.album-card-edit input {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  min-width: 0;
+}
+
+.album-card-edit .icon-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.album-card-edit .icon-btn:hover {
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.album-card.merge-selectable {
+  cursor: pointer;
+}
+
+.album-card.merge-selectable::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  border: 2px solid transparent;
+  transition: border-color var(--transition);
+}
+
+.album-card.merge-selectable:hover::after {
+  border-color: var(--accent);
+}
+
+.album-card.merge-selected::after {
+  border-color: var(--accent);
+}
+
+.album-card.merge-selected {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.merge-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--accent);
+  color: white;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* AI 分类弹窗 */
+.ai-classify-modal {
+  width: 90%;
+  max-width: 600px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-classify-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.ai-classify-modal .modal-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+}
+
+.ai-classify-modal .modal-header h3 svg {
+  color: var(--accent);
+}
+
+.ai-classify-modal .step-hint {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.ai-classify-modal .select-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ai-classify-modal .select-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ai-classify-modal .track-select-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.ai-classify-modal .track-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+
+.ai-classify-modal .track-select-item:last-child {
+  border-bottom: none;
+}
+
+.ai-classify-modal .track-select-item:hover {
+  background: var(--bg-secondary);
+}
+
+.ai-classify-modal .track-select-item.selected {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.ai-classify-modal .track-select-item.selected svg {
+  color: var(--accent);
+}
+
+.ai-classify-modal .track-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-classify-modal .rule-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: 14px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.ai-classify-modal .rule-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.ai-classify-modal .rule-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.ai-classify-modal .classification-preview {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.ai-classify-modal .classification-group {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.ai-classify-modal .group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ai-classify-modal .group-header strong {
+  color: var(--accent);
+}
+
+.ai-classify-modal .group-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ai-classify-modal .group-songs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ai-classify-modal .song-tag {
+  font-size: 12px;
+  padding: 4px 8px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+.ai-classify-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
 }
 
 /* 有悬浮播放器时给页面底部留出空间 */

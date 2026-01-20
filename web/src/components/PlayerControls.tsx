@@ -1,5 +1,6 @@
 import { Music, Pause, Play, Shuffle, SkipBack, SkipForward, Trash2 } from 'lucide-react'
 import type { Track } from '../types'
+import './PlayerControls.css'
 import { formatDuration } from '../utils'
 import { CoverImage } from './CoverImage'
 

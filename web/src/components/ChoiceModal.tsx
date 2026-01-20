@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import type { ResolveChoice } from '../types'
+import './ChoiceModal.css'
 
 interface Props {
   open: boolean
