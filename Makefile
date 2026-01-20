@@ -1,6 +1,6 @@
 PYTHON ?= python3
 VENV ?= .venv
-PORT ?= 5000
+PORT ?= 5001
 WEB_DIR ?= web
 TAURI_DIR ?= tauri-app
 DIST_DIR ?= dist

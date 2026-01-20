@@ -1,8 +1,10 @@
-import type { ChangeEvent } from 'react'
-import { FolderOpen, Library, Music, Search } from 'lucide-react'
+import { useState, type ChangeEvent } from 'react'
+import { FolderOpen, Library, Loader, Music, Search } from 'lucide-react'
 import type { Track } from '../types'
+import type { Playlist } from '../api'
 import * as api from '../api'
 import { TrackList } from './TrackList'
+import { PlaylistPicker } from './PlaylistPicker'
 
 export type SortMode = 'created_desc' | 'created_asc' | 'alpha_asc' | 'alpha_desc' | 'album'
 
@@ -13,6 +15,7 @@ export interface AlbumGroup {
 }
 
 interface LibraryPageProps {
+  loading?: boolean
   search: string
   onSearchChange: (value: string) => void
   sortMode: SortMode
@@ -25,9 +28,15 @@ interface LibraryPageProps {
   playingTrackId: string | null
   onPlayTrack: (track: Track) => void
   onDeleteTrack: (trackId: string) => void
+  scrollToTrackId?: string | null
+  playlists?: Playlist[]
+  onCreatePlaylist?: (name: string) => void
+  onAddToPlaylist?: (playlistId: string, trackId: string) => void
+  onRefreshPlaylists?: () => void
 }
 
 export function LibraryPage({
+  loading = false,
   search,
   onSearchChange,
   sortMode,
@@ -40,7 +49,48 @@ export function LibraryPage({
   playingTrackId,
   onPlayTrack,
   onDeleteTrack,
+  scrollToTrackId,
+  playlists,
+  onCreatePlaylist,
+  onAddToPlaylist,
+  onRefreshPlaylists,
 }: LibraryPageProps) {
+  const hasPlaylistFeature = playlists && onCreatePlaylist && onAddToPlaylist && onRefreshPlaylists
+  const [showPlaylistPicker, setShowPlaylistPicker] = useState(false)
+  const [pendingTrackId, setPendingTrackId] = useState<string | null>(null)
+
+  const handleAddToPlaylist = (trackId: string) => {
+    if (!hasPlaylistFeature) return
+    setPendingTrackId(trackId)
+    setShowPlaylistPicker(true)
+    onRefreshPlaylists!()
+  }
+
+  const handleSelectPlaylist = (playlistId: string) => {
+    if (pendingTrackId && onAddToPlaylist) {
+      onAddToPlaylist(playlistId, pendingTrackId)
+    }
+    setShowPlaylistPicker(false)
+    setPendingTrackId(null)
+  }
+
+  const handleClosePicker = () => {
+    setShowPlaylistPicker(false)
+    setPendingTrackId(null)
+  }
+
+  // 加载状态
+  if (loading) {
+    return (
+      <div className="library-page">
+        <div className="library-loading">
+          <Loader className="spin" size={32} />
+          <p>正在加载音乐库...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="library-page">
       {/* 工具栏 */}
@@ -54,6 +104,11 @@ export function LibraryPage({
             onChange={(e: ChangeEvent<HTMLInputElement>) => onSearchChange(e.target.value)}
           />
         </div>
+        {search && (
+          <span className="search-result-count">
+            找到 {sortedTracks.length} 首
+          </span>
+        )}
         <button
           className="btn btn-secondary btn-sm"
           onClick={() => api.openDownloadFolder()}
@@ -92,6 +147,8 @@ export function LibraryPage({
                   playingId={playingTrackId}
                   onPlay={onPlayTrack}
                   onDelete={onDeleteTrack}
+                  onAddToPlaylist={hasPlaylistFeature ? handleAddToPlaylist : undefined}
+                  scrollToTrackId={scrollToTrackId}
                 />
               </>
             ) : (
@@ -138,6 +195,19 @@ export function LibraryPage({
           playingId={playingTrackId}
           onPlay={onPlayTrack}
           onDelete={onDeleteTrack}
+          onAddToPlaylist={hasPlaylistFeature ? handleAddToPlaylist : undefined}
+          scrollToTrackId={scrollToTrackId}
+        />
+      )}
+
+      {/* 播放列表选择弹窗 */}
+      {hasPlaylistFeature && (
+        <PlaylistPicker
+          open={showPlaylistPicker}
+          playlists={playlists!}
+          onSelect={handleSelectPlaylist}
+          onCreate={onCreatePlaylist!}
+          onClose={handleClosePicker}
         />
       )}
     </div>

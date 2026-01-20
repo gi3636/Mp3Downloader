@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react'
 import type { Track } from '../types'
 import { formatDuration } from '../utils'
 import { CoverImage } from './CoverImage'
@@ -7,9 +8,10 @@ interface Props {
   currentIndex: number
   totalCount: number
   onClickTitle?: () => void
+  onDelete?: () => void
 }
 
-export function NowPlaying({ track, currentIndex, totalCount, onClickTitle }: Props) {
+export function NowPlaying({ track, currentIndex, totalCount, onClickTitle, onDelete }: Props) {
   if (!track) return null
 
   return (
@@ -31,6 +33,16 @@ export function NowPlaying({ track, currentIndex, totalCount, onClickTitle }: Pr
           </span>
         </div>
       </div>
+      {onDelete && (
+        <button
+          className="now-playing-delete"
+          type="button"
+          title="删除当前歌曲"
+          onClick={onDelete}
+        >
+          <Trash2 size={16} />
+        </button>
+      )}
     </div>
   )
 }

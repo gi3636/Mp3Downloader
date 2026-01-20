@@ -148,14 +148,14 @@ PORT=8080 make run
 └── yt-dlp_macos        # yt-dlp 可执行文件
 ```
 
-## �🔧 技术栈
+## 🔧 技术栈
 
-- **后端**: Python + Flask
-- **前端**: React + TypeScript + Vite
-- **UI**: Lucide Icons
-- **下载**: yt-dlp
-- **音频**: ffmpeg + mutagen
-- **桌面应用**: Tauri (可选)
+- **后端**: [Python](https://www.python.org/) + [Flask](https://flask.palletsprojects.com/)
+- **前端**: [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/)
+- **图标**: [Lucide Icons](https://lucide.dev/)
+- **下载**: [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+- **音频**: [ffmpeg](https://ffmpeg.org/) + [mutagen](https://mutagen.readthedocs.io/)
+- **桌面应用**: [Tauri](https://tauri.app/) (可选)
 
 ## 🧩 更多问题解答
 

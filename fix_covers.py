@@ -8,18 +8,26 @@
 import json
 import re
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from subprocess import run, TimeoutExpired
 
 from config import YTDLP_BIN
 from settings_service import get_download_dir
 
+# 并行搜索的线程数
+MAX_WORKERS = 4
+
 
 def search_youtube_video(title: str) -> str | None:
     """通过标题搜索 YouTube 视频，获取封面"""
-    # 清理标题中的特殊字符
-    clean_title = re.sub(r'[【】\[\]「」『』（）\(\)\|｜]', ' ', title)
-    clean_title = re.sub(r'\s+', ' ', clean_title).strip()[:80]  # 限制长度
+    # 清理标题中的特殊字符和序号
+    clean_title = re.sub(r'^\d+\s*[-\.]\s*', '', title)  # 移除开头的序号
+    clean_title = re.sub(r'[【】\[\]「」『』（）\(\)\|｜\-–—]', ' ', clean_title)
+    clean_title = re.sub(r'\s+', ' ', clean_title).strip()[:100]  # 增加长度限制
+    
+    if not clean_title or len(clean_title) < 3:
+        return None
     
     # 使用 yt-dlp 搜索
     cmd = [
@@ -28,11 +36,11 @@ def search_youtube_video(title: str) -> str | None:
         "--dump-single-json",
         "--skip-download",
         "--no-warnings",
-        "--socket-timeout", "10",
+        "--socket-timeout", "8",
     ]
     
     try:
-        res = run(cmd, capture_output=True, text=True, timeout=15)
+        res = run(cmd, capture_output=True, text=True, timeout=12)
         if res.returncode != 0:
             return None
         
@@ -43,26 +51,26 @@ def search_youtube_video(title: str) -> str | None:
         
         entry = entries[0]
         
-        # 获取最佳封面
-        thumbnail = entry.get("thumbnail")
+        # 获取最佳封面 (优先使用 maxresdefault)
+        thumbnails = entry.get("thumbnails", [])
+        thumbnail = None
+        
+        # 按优先级查找封面
+        for t in thumbnails:
+            if not isinstance(t, dict):
+                continue
+            url = t.get("url", "")
+            if not url or "no_thumbnail" in url:
+                continue
+            # 优先使用高清封面
+            if "maxresdefault" in url or "hqdefault" in url:
+                thumbnail = url
+                break
+            if not thumbnail:
+                thumbnail = url
+        
         if not thumbnail:
-            thumbs = entry.get("thumbnails", [])
-            if thumbs:
-                best = None
-                best_area = -1
-                for t in thumbs:
-                    if not isinstance(t, dict):
-                        continue
-                    url = t.get("url")
-                    if not url or "no_thumbnail" in url:
-                        continue
-                    w = t.get("width") or 0
-                    h = t.get("height") or 0
-                    area = int(w) * int(h)
-                    if area >= best_area:
-                        best_area = area
-                        best = url
-                thumbnail = best
+            thumbnail = entry.get("thumbnail")
         
         return thumbnail
     except TimeoutExpired:
@@ -72,7 +80,7 @@ def search_youtube_video(title: str) -> str | None:
 
 
 def fix_covers_for_job(job_dir: Path) -> int:
-    """修复单个任务目录的封面"""
+    """修复单个任务目录的封面（使用并行处理）"""
     thumbs_file = job_dir / "__track_thumbnails.json"
     meta_file = job_dir / "__meta.json"
     
@@ -98,34 +106,56 @@ def fix_covers_for_job(job_dir: Path) -> int:
     if not mp3_files:
         return 0
     
-    fixed_count = 0
+    # 收集需要修复的文件
+    to_fix = []
     new_thumbs = {}
     
-    for i, mp3 in enumerate(mp3_files):
+    for mp3 in mp3_files:
         title = mp3.stem
+        current_thumb = existing_thumbs.get(title)
         
         # 检查是否需要修复
-        current_thumb = existing_thumbs.get(title)
         needs_fix = (
             not current_thumb or 
             current_thumb == playlist_thumb or
             "no_thumbnail" in (current_thumb or "")
         )
         
-        if not needs_fix:
+        if needs_fix:
+            to_fix.append(title)
+        else:
             new_thumbs[title] = current_thumb
-            continue
+    
+    if not to_fix:
+        return 0
+    
+    print(f"  需要修复 {len(to_fix)} 个封面，使用 {MAX_WORKERS} 线程并行处理...")
+    
+    fixed_count = 0
+    completed = 0
+    
+    # 使用线程池并行搜索
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_title = {executor.submit(search_youtube_video, title): title for title in to_fix}
         
-        sys.stdout.write(f"\r  [{i+1}/{len(mp3_files)}] 搜索: {title[:50]}...")
-        sys.stdout.flush()
-        
-        thumbnail = search_youtube_video(title)
-        
-        if thumbnail:
-            new_thumbs[title] = thumbnail
-            fixed_count += 1
-        elif current_thumb:
-            new_thumbs[title] = current_thumb
+        for future in as_completed(future_to_title):
+            title = future_to_title[future]
+            completed += 1
+            
+            try:
+                thumbnail = future.result()
+                if thumbnail:
+                    new_thumbs[title] = thumbnail
+                    fixed_count += 1
+                elif existing_thumbs.get(title):
+                    new_thumbs[title] = existing_thumbs[title]
+            except Exception:
+                if existing_thumbs.get(title):
+                    new_thumbs[title] = existing_thumbs[title]
+            
+            # 显示进度
+            sys.stdout.write(f"\r  进度: {completed}/{len(to_fix)} (已修复: {fixed_count})")
+            sys.stdout.flush()
     
     print()  # 换行
     

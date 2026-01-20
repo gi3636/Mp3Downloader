@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Download,
   Library,
-  Music,
   Settings,
 } from 'lucide-react'
 import type { DownloadItem, JobMeta, PlaylistInfo, ResolveChoice, Track } from './types'
@@ -13,7 +12,6 @@ import { ChoiceModal } from './components/ChoiceModal'
 import { ConfirmModal } from './components/ConfirmModal'
 import { useToast } from './hooks/useToast'
 import { TrackSelectModal, type TrackSelection } from './components/TrackSelectModal'
-import { NowPlaying } from './components/NowPlaying'
 import { PlayerControls } from './components/PlayerControls'
 import { SettingsModal } from './components/SettingsModal'
 import { DownloadPage } from './components/DownloadPage'
@@ -54,6 +52,7 @@ export default function App() {
 
   // 音乐库状态
   const [libTracks, setLibTracks] = useState<Track[]>([])
+  const [libLoading, setLibLoading] = useState(true)
   const [libSearch, setLibSearch] = useState('')
   const [libShuffle, setLibShuffle] = useState(false)
   const [libCurrentTrackId, setLibCurrentTrackId] = useState<string | null>(null)
@@ -71,13 +70,6 @@ export default function App() {
   const [libDuration, setLibDuration] = useState(0)
   const [libSeeking, setLibSeeking] = useState(false)
   const [libSeekTime, setLibSeekTime] = useState(0)
-
-  // 音量控制
-  const [libVolume, setLibVolume] = useState(() => {
-    const saved = localStorage.getItem('mp3dl.volume')
-    return saved ? parseFloat(saved) : 1
-  })
-  const [libMuted, setLibMuted] = useState(false)
 
   // Toast 通知
   const { toasts, pushToast } = useToast()
@@ -212,11 +204,14 @@ export default function App() {
 
   // 音乐库操作
   async function refreshLibrary() {
+    setLibLoading(true)
     try {
       const data = await api.getLibraryTracks()
       setLibTracks(data.tracks || [])
     } catch (e: any) {
       pushToast(e?.message || '加载音乐库失败', 'error')
+    } finally {
+      setLibLoading(false)
     }
   }
 
@@ -701,27 +696,6 @@ export default function App() {
     setLibSeeking(false)
   }
 
-  // 音量处理
-  function handleVolumeChange(volume: number) {
-    setLibVolume(volume)
-    setLibMuted(false)
-    localStorage.setItem('mp3dl.volume', String(volume))
-    const el = libPlayerRef.current
-    if (el) {
-      el.volume = volume
-      el.muted = false
-    }
-  }
-
-  // 同步音量到播放器
-  useEffect(() => {
-    const el = libPlayerRef.current
-    if (el) {
-      el.volume = libMuted ? 0 : libVolume
-      el.muted = libMuted
-    }
-  }, [libVolume, libMuted])
-
   // 键盘快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -745,24 +719,12 @@ export default function App() {
           e.preventDefault()
           nextTrack()
           break
-        case 'ArrowUp':
-          e.preventDefault()
-          handleVolumeChange(Math.min(1, libVolume + 0.1))
-          break
-        case 'ArrowDown':
-          e.preventDefault()
-          handleVolumeChange(Math.max(0, libVolume - 0.1))
-          break
-        case 'KeyM':
-          e.preventDefault()
-          setLibMuted(!libMuted)
-          break
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [libCurrentTrackId, libVolume, libMuted])
+  }, [libCurrentTrackId])
 
   return (
     <div className="app">
@@ -872,6 +834,7 @@ export default function App() {
       {/* 音乐库页面 */}
       {tab === 'library' && (
         <LibraryPage
+          loading={libLoading}
           search={libSearch}
           onSearchChange={setLibSearch}
           sortMode={libSortMode}
@@ -889,37 +852,24 @@ export default function App() {
 
       {/* 悬浮播放器 - 始终显示在底部 */}
       <div className="floating-player">
-        {libCurrentTrack ? (
-          <NowPlaying
-            track={libCurrentTrack}
-            currentIndex={libCurrentIndex}
-            totalCount={currentPlaylist.length}
-            onClickTitle={() => setTab('library')}
-            onDelete={handleDeleteCurrentTrack}
-          />
-        ) : (
-          <div className="now-playing empty">
-            <Music size={24} />
-            <span>选择一首歌曲开始播放</span>
-          </div>
-        )}
         <PlayerControls
+          track={libCurrentTrack}
+          currentIndex={libCurrentIndex}
+          totalCount={currentPlaylist.length}
           isPlaying={libIsPlaying}
           shuffle={libShuffle}
           currentTime={libCurrentTime}
           duration={libDuration}
           seeking={libSeeking}
           seekTime={libSeekTime}
-          volume={libVolume}
-          muted={libMuted}
           onPlayPause={togglePlayPause}
           onPrev={prevTrack}
           onNext={nextTrack}
           onToggleShuffle={() => setLibShuffle(!libShuffle)}
           onSeekChange={handleSeekChange}
           onSeekCommit={handleSeekCommit}
-          onVolumeChange={handleVolumeChange}
-          onToggleMute={() => setLibMuted(!libMuted)}
+          onClickTitle={() => setTab('library')}
+          onDelete={handleDeleteCurrentTrack}
         />
       </div>
     </div>

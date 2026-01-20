@@ -780,20 +780,73 @@ body {
 
 .player-bar {
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 歌曲信息 + 播放控件同一行 */
+.player-main {
+  display: flex;
   align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.player-track-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.player-track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.player-track-title {
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.player-track-title:hover {
+  color: var(--accent);
+}
+
+.player-track-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.player-track-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 140px;
 }
 
 .player-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-left: auto;
 }
 
-.player-bar .player-controls {
-  margin-bottom: 0;
+.player-btn.delete-btn {
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+.player-btn.delete-btn:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .player-progress {
@@ -855,25 +908,56 @@ body {
 
 /* ========== 音量控制 ========== */
 .player-volume {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(59, 130, 246, 0.18);
-  background: rgba(11, 18, 32, 0.35);
+  position: relative;
 }
 
-.volume-range {
-  width: 80px;
+.volume-popup {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: volumePopupIn 0.15s ease;
+}
+
+@keyframes volumePopupIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.volume-slider-wrapper {
+  width: 24px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.volume-range-vertical {
   -webkit-appearance: none;
   appearance: none;
+  width: 80px;
   height: 4px;
   border-radius: 999px;
   outline: none;
+  cursor: pointer;
+  transform: rotate(-90deg);
+  transform-origin: center center;
 }
 
-.volume-range::-webkit-slider-thumb {
+.volume-range-vertical::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 12px;
@@ -881,24 +965,30 @@ body {
   border-radius: 999px;
   background: var(--accent);
   border: 2px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   cursor: pointer;
 }
 
-.volume-range::-moz-range-thumb {
+.volume-range-vertical::-moz-range-thumb {
   width: 12px;
   height: 12px;
   border-radius: 999px;
   background: var(--accent);
   border: 2px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   cursor: pointer;
 }
 
-.volume-range::-moz-range-track {
+.volume-range-vertical::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  background: transparent;
+}
+
+.volume-range-vertical::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
 }
 
 /* ========== 当前播放信息 ========== */
@@ -1220,6 +1310,14 @@ audio::-webkit-media-controls-timeline {
 .sort-select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.library-toolbar .btn {
+  height: 42px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sort-select option {
@@ -2115,6 +2213,463 @@ audio::-webkit-media-controls-timeline {
   color: var(--muted);
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.checkbox-row span {
+  cursor: inherit;
+}
+
+.parsing-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.parsing-hint .spin {
+  color: var(--accent);
+}
+
+.parsing-hint-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.parsing-hint-title {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.parsing-hint-sub {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* ========== 下载进度卡片 ========== */
+.download-progress-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.download-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.download-progress-cover {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.download-progress-cover-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.download-progress-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.download-progress-title {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.download-progress-status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.download-progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.download-progress-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.download-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.download-progress-fill {
+  height: 100%;
+  background: var(--gradient-success);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.download-progress-pct {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 40px;
+  text-align: right;
+}
+
+.download-progress-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.download-progress-current span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-status {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.progress-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.progress-current {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
+}
+
+.track-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 20px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.track-list-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.search-result-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* 任务列表样式 */
+.job-list-section {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.job-list-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.job-list-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.job-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.job-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  border-bottom: 1px solid var(--border);
+}
+
+.job-item:last-child {
+  border-bottom: none;
+}
+
+.job-item:hover {
+  background: var(--bg-secondary);
+}
+
+.job-item.active {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.job-item-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.job-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.job-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.job-item-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.job-item-status.running {
+  color: var(--accent);
+}
+
+.job-item-status.done {
+  color: var(--success);
+}
+
+.job-item-status.error,
+.job-item-status.canceled {
+  color: var(--danger);
+}
+
+.job-item-progress {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.job-item-time {
+  color: var(--muted);
+}
+
+.job-item-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.job-item:hover .job-item-actions {
+  opacity: 1;
+}
+
+.job-item-action {
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.job-item-action:hover {
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.job-item-action.job-item-delete:hover,
+.job-item-action.job-item-cancel:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* ========== 播放列表选择器 ========== */
+.playlist-picker {
+  max-width: 400px;
+  width: 90%;
+}
+
+.playlist-picker h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.playlist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.playlist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.playlist-item:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.playlist-item .playlist-name {
+  flex: 1;
+  font-size: 14px;
+}
+
+.playlist-item .playlist-count {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.create-playlist-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.create-playlist-row input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.create-playlist-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.track-btn.add-to-playlist {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.track-item:hover .track-btn.add-to-playlist {
+  opacity: 1;
+}
+
+.track-btn.add-to-playlist:hover {
+  color: var(--accent);
+}
+
 .album-info {
   display: flex;
   gap: 16px;
@@ -2281,6 +2836,21 @@ audio::-webkit-media-controls-timeline {
 .floating-player .player-bar {
   max-width: 800px;
   margin: 0 auto;
+}
+
+/* 音乐库加载状态 */
+.library-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 20px;
+  color: var(--text-secondary);
+}
+
+.library-loading p {
+  font-size: 14px;
 }
 
 /* 有悬浮播放器时给页面底部留出空间 */

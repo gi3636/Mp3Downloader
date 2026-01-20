@@ -38,6 +38,10 @@ else:
     DOWNLOAD_DIR = BASE_DIR / "download"
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+# 代理配置 (可选，用于加速 YouTube 访问)
+# 格式: http://host:port 或 socks5://host:port
+PROXY_URL = os.environ.get("YTDLP_PROXY", "")
+
 # 打印配置信息（调试用）
 if os.environ.get("DEBUG"):
     print(f"[Config] BASE_DIR: {BASE_DIR}")

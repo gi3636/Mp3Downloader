@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, CheckSquare, Download, Square } from 'lucide-react'
+import { Check, CheckSquare, Download, RefreshCw, Square } from 'lucide-react'
 import type { PlaylistInfo } from '../types'
 import { Modal } from './Modal'
 import { formatDuration } from '../utils'
@@ -21,7 +21,8 @@ interface Props {
 export function TrackSelectModal({ open, playlist, onClose, onConfirm }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  const entries = playlist?.entries || []
+  const allEntries = playlist?.entries || []
+  const entries = allEntries.filter((e) => e.url)
   const defaultThumb = playlist?.thumbnail || ''
 
   const toggle = (url: string) => {
@@ -34,10 +35,20 @@ export function TrackSelectModal({ open, playlist, onClose, onConfirm }: Props) 
   }
 
   const selectAll = () => {
-    setSelected(new Set(entries.map((e) => e.url).filter((u): u is string => Boolean(u))))
+    setSelected(new Set(entries.map((e) => e.url!)))
   }
 
   const selectNone = () => setSelected(new Set())
+
+  const invertSelection = () => {
+    setSelected((prev) => {
+      const next = new Set<string>()
+      entries.forEach((e) => {
+        if (!prev.has(e.url!)) next.add(e.url!)
+      })
+      return next
+    })
+  }
 
   const handleConfirm = () => {
     const urls = Array.from(selected)
@@ -69,6 +80,10 @@ export function TrackSelectModal({ open, playlist, onClose, onConfirm }: Props) 
           <button className="btn btn-secondary btn-sm" type="button" onClick={selectNone}>
             <Square size={16} />
             <span>取消全选</span>
+          </button>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={invertSelection}>
+            <RefreshCw size={16} />
+            <span>反选</span>
           </button>
           <div className="toolbar-spacer" />
           <span className="toolbar-info">共 {entries.length} 首</span>

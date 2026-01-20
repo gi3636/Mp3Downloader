@@ -11,11 +11,18 @@ import json
 import re
 from subprocess import run
 
-from config import YTDLP_BIN
+from config import YTDLP_BIN, PROXY_URL
 
 
 # 正则表达式: 匹配播放列表 URL 参数
 _PLAYLIST_URL_RE = re.compile(r"(^|[?&])list=", re.IGNORECASE)
+
+
+def _get_proxy_args() -> list[str]:
+    """获取代理相关的命令行参数"""
+    if PROXY_URL:
+        return ["--proxy", PROXY_URL]
+    return []
 
 
 def looks_like_playlist_url(url: str) -> bool:
@@ -75,6 +82,8 @@ def fetch_playlists_from_channel(url: str) -> list[dict]:
         "--skip-download",
         "--flat-playlist",
         "--no-warnings",
+        "--socket-timeout", "15",
+        *_get_proxy_args(),
         playlists_url,
     ]
 
@@ -188,6 +197,8 @@ def fetch_playlist_metadata(url: str) -> dict | None:
         "--skip-download",
         "--flat-playlist",
         "--no-warnings",
+        "--socket-timeout", "15",
+        *_get_proxy_args(),
         url,
     ]
 
@@ -221,6 +232,8 @@ def fetch_playlist_entries(url: str) -> dict | None:
         "--skip-download",
         "--flat-playlist",
         "--no-warnings",
+        "--socket-timeout", "15",
+        *_get_proxy_args(),
         url,
     ]
 
@@ -317,6 +330,9 @@ def fetch_single_metadata(url: str) -> dict | None:
         "--dump-single-json",
         "--skip-download",
         "--no-warnings",
+        "--no-playlist",
+        "--socket-timeout", "15",
+        *_get_proxy_args(),
         url,
     ]
 

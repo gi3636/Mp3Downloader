@@ -35,10 +35,10 @@ fi
 
 # 启动服务
 echo "🚀 启动服务器..."
-echo "📍 访问地址: http://127.0.0.1:5000"
+echo "📍 访问地址: http://127.0.0.1:5001"
 echo ""
 echo "按 Ctrl+C 停止服务"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-PORT=5000 .venv/bin/python app.py
+PORT=5001 .venv/bin/python app.py

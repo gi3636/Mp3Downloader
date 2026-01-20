@@ -83,6 +83,7 @@ class JobState:
     download_items: list[DownloadItem] = field(default_factory=list)
     paused: bool = False  # 是否暂停整个任务
     paused_items: set[int] = field(default_factory=set)  # 暂停的单个项目索引
+    force_single: bool = False  # 强制作为单曲下载
     
     @property
     def download_items_dict(self) -> list[dict]:

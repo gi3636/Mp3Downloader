@@ -20,7 +20,7 @@ export function DownloadItemsList({
   onPauseAll,
   onPauseItem,
 }: Props) {
-  if (!items.length) return null
+  if (!items || !items.length) return null
 
   const doneCount = items.filter((i) => i.status === 'done').length
 

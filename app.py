@@ -116,6 +116,7 @@ def create_job():
     请求体: 
       - { "url": "https://..." } - 下载整个播放列表
       - { "url": "https://...", "video_urls": [...], "video_titles": [...], "video_thumbnails": [...] }
+      - { "url": "https://...", "force_single": true } - 强制下载单曲（忽略播放列表）
       
     响应: { "job_id": "xxx" }
     """
@@ -124,6 +125,7 @@ def create_job():
     video_urls = data.get("video_urls")
     video_titles = data.get("video_titles")
     video_thumbnails = data.get("video_thumbnails")
+    force_single = data.get("force_single", False)
 
     if not url:
         return jsonify({"error": "url 不能为空"}), 400
@@ -135,9 +137,37 @@ def create_job():
     if video_urls and isinstance(video_urls, list) and len(video_urls) > 0:
         job_id = _manager.create_job_with_urls(url, video_urls, video_titles, video_thumbnails)
     else:
-        job_id = _manager.create_job(url)
+        job_id = _manager.create_job(url, force_single=force_single)
     
     return jsonify({"job_id": job_id})
+
+
+@app.get("/api/jobs")
+def list_jobs():
+    """
+    获取所有任务列表
+    
+    响应: { "jobs": [...] }
+    """
+    jobs = _manager.list_jobs()
+    result = []
+    for job in jobs:
+        result.append({
+            "id": job.id,
+            "url": job.url,
+            "status": job.status,
+            "created_at": job.created_at,
+            "updated_at": job.updated_at,
+            "progress": job.progress,
+            "message": job.message,
+            "meta": {
+                "title": job.playlist_title,
+                "thumbnail_url": job.thumbnail_url,
+                "total_items": job.total_items,
+            },
+            "paused": job.paused,
+        })
+    return jsonify({"jobs": result})
 
 
 @app.get("/api/jobs/<job_id>")
@@ -231,6 +261,69 @@ def delete_job(job_id: str):
     """删除任务及其文件"""
     _manager.delete_job(job_id)
     return jsonify({"ok": True})
+
+
+@app.post("/api/jobs/<job_id>/open-folder")
+def open_job_folder(job_id: str):
+    """在系统文件管理器中打开任务的下载目录"""
+    import subprocess
+    import platform
+    
+    job_dir = get_download_dir() / job_id
+    if not job_dir.exists():
+        return jsonify({"error": "任务目录不存在"}), 404
+    
+    try:
+        system = platform.system()
+        if system == "Darwin":  # macOS
+            subprocess.run(["open", str(job_dir)], check=True)
+        elif system == "Windows":
+            subprocess.run(["explorer", str(job_dir)], check=True)
+        else:  # Linux
+            subprocess.run(["xdg-open", str(job_dir)], check=True)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": f"无法打开目录: {e}"}), 500
+
+
+@app.get("/api/jobs/disk-usage")
+def get_disk_usage():
+    """
+    获取任务目录的磁盘使用情况
+    
+    响应: { "job_count": n, "total_mb": x, "total_gb": y }
+    """
+    usage = _manager.get_disk_usage()
+    return jsonify(usage)
+
+
+@app.post("/api/jobs/cleanup-old")
+def cleanup_old_jobs():
+    """
+    清理超过指定天数的已完成任务
+    
+    请求体: { "max_age_days": 7 }  (可选，默认7天)
+    响应: { "deleted_count": n, "freed_mb": x }
+    """
+    data = request.get_json(silent=True) or {}
+    max_age_days = int(data.get("max_age_days", 7))
+    
+    if max_age_days < 0:
+        return jsonify({"error": "max_age_days 必须大于等于 0"}), 400
+    
+    result = _manager.cleanup_old_jobs(max_age_days)
+    return jsonify(result)
+
+
+@app.post("/api/jobs/cleanup-all")
+def cleanup_all_jobs():
+    """
+    清理所有已完成的任务（一键清理）
+    
+    响应: { "deleted_count": n, "freed_mb": x }
+    """
+    result = _manager.cleanup_all_completed_jobs()
+    return jsonify(result)
 
 
 @app.get("/api/jobs/<job_id>/download")
@@ -341,7 +434,10 @@ def list_library_tracks():
                 if meta:
                     if meta.get("thumbnail_url"):
                         cover_url = str(meta.get("thumbnail_url"))
-                    if meta.get("title"):
+                    # 只有播放列表（有子目录，即 parts >= 3）才设置专辑标题
+                    # 单曲格式: job_id/song.mp3 (2 parts)
+                    # 播放列表格式: job_id/playlist_name/song.mp3 (3+ parts)
+                    if len(parts) >= 3 and meta.get("title"):
                         album_title = str(meta.get("title"))
                 
                 # 尝试读取单曲封面 (从 track_thumbnails.json)
@@ -349,10 +445,17 @@ def list_library_tracks():
                 if track_thumbs_file.exists():
                     try:
                         import json
+                        import re
                         track_thumbs = json.loads(track_thumbs_file.read_text(encoding="utf-8"))
                         title = t.get("title", "")
+                        # 先尝试直接匹配
                         if title in track_thumbs:
                             cover_url = track_thumbs[title]
+                        else:
+                            # 尝试去掉编号前缀匹配 (如 "460 - GOLDEN NIGHT" -> "GOLDEN NIGHT")
+                            stripped = re.sub(r'^\d+\s*[-–—]\s*', '', title)
+                            if stripped and stripped in track_thumbs:
+                                cover_url = track_thumbs[stripped]
                     except Exception:
                         pass
 
@@ -404,6 +507,79 @@ def delete_library_track(track_id: str):
     except Exception:
         pass
 
+    return jsonify({"ok": True})
+
+
+# ========== API: 播放列表管理 ==========
+
+from playlist_service import (
+    list_playlists,
+    create_playlist,
+    rename_playlist,
+    delete_playlist,
+    add_track_to_playlist,
+)
+
+
+@app.get("/api/playlists")
+def get_playlists():
+    """获取所有播放列表"""
+    playlists = list_playlists()
+    return jsonify({"playlists": playlists})
+
+
+@app.post("/api/playlists")
+def create_new_playlist():
+    """创建新播放列表"""
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    
+    if not name:
+        return jsonify({"error": "名称不能为空"}), 400
+    
+    playlist = create_playlist(name)
+    return jsonify(playlist)
+
+
+@app.put("/api/playlists/<playlist_id>")
+def update_playlist(playlist_id: str):
+    """重命名播放列表"""
+    data = request.get_json() or {}
+    new_name = data.get("name", "").strip()
+    
+    if not new_name:
+        return jsonify({"error": "名称不能为空"}), 400
+    
+    playlist = rename_playlist(playlist_id, new_name)
+    if not playlist:
+        return jsonify({"error": "播放列表不存在"}), 404
+    
+    return jsonify(playlist)
+
+
+@app.delete("/api/playlists/<playlist_id>")
+def remove_playlist(playlist_id: str):
+    """删除播放列表"""
+    ok = delete_playlist(playlist_id)
+    if not ok:
+        return jsonify({"error": "播放列表不存在"}), 404
+    
+    return jsonify({"ok": True})
+
+
+@app.post("/api/playlists/<playlist_id>/tracks")
+def add_track(playlist_id: str):
+    """添加歌曲到播放列表"""
+    data = request.get_json() or {}
+    track_id = data.get("track_id", "")
+    
+    if not track_id:
+        return jsonify({"error": "缺少 track_id"}), 400
+    
+    ok = add_track_to_playlist(playlist_id, track_id)
+    if not ok:
+        return jsonify({"error": "添加失败"}), 400
+    
     return jsonify({"ok": True})
 
 
@@ -600,5 +776,5 @@ def open_folder():
 # ========== 启动入口 ==========
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "5000"))
+    port = int(os.environ.get("PORT", "5001"))
     app.run(host="127.0.0.1", port=port, debug=True)

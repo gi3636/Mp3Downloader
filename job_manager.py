@@ -20,7 +20,8 @@ from pathlib import Path
 from subprocess import PIPE, Popen
 from collections import deque
 
-from config import ARCHIVE_FILE, JOBS_DIR, YTDLP_BIN
+from config import ARCHIVE_FILE, JOBS_DIR, YTDLP_BIN, PROXY_URL
+import db
 from models import JobState, DownloadItem
 from settings_service import get_download_dir
 from tracks_service import write_job_meta, write_track_meta
@@ -46,7 +47,10 @@ _ITEM_RE = re.compile(
     re.IGNORECASE,
 )
 
-_SELECTED_DOWNLOAD_CONCURRENCY = max(1, min(15, int(os.environ.get("MP3DL_SELECTED_CONCURRENCY", "3"))))
+# 并发下载数（默认 5，可通过环境变量调整）
+_SELECTED_DOWNLOAD_CONCURRENCY = max(1, min(15, int(os.environ.get("MP3DL_SELECTED_CONCURRENCY", "5"))))
+# 并行下载片段数（加速单个视频下载）
+_CONCURRENT_FRAGMENTS = max(1, min(10, int(os.environ.get("MP3DL_CONCURRENT_FRAGMENTS", "4"))))
 
 
 class JobManager:
@@ -60,24 +64,68 @@ class JobManager:
         self._lock = threading.Lock()
         self._jobs: dict[str, JobState] = {}
         self._procs: dict[str, set[Popen]] = {}
+        
+        # 从数据库加载已有任务
+        self._load_jobs_from_db()
+        
+        # 启动时自动清理超过 7 天的旧任务
+        self._auto_cleanup_on_start()
+
+    def _auto_cleanup_on_start(self):
+        """启动时自动清理超过 7 天的旧任务"""
+        try:
+            result = self.cleanup_old_jobs(max_age_days=7)
+            if result['deleted_count'] > 0:
+                print(f"[JobManager] 自动清理了 {result['deleted_count']} 个旧任务，释放 {result['freed_mb']} MB")
+        except Exception as e:
+            print(f"[JobManager] 自动清理失败: {e}")
+
+    def _load_jobs_from_db(self):
+        """从数据库加载已有任务"""
+        try:
+            jobs = db.load_all_jobs()
+            for job in jobs:
+                # 只加载非运行中的任务（运行中的任务需要重新开始）
+                if job.status in ('done', 'error', 'canceled'):
+                    self._jobs[job.id] = job
+                elif job.status in ('running', 'queued'):
+                    # 运行中的任务标记为已取消（因为服务重启了）
+                    job.status = 'canceled'
+                    job.message = '服务重启，任务已取消'
+                    self._jobs[job.id] = job
+                    db.save_job(job)
+        except Exception as e:
+            print(f"加载任务失败: {e}")
+
+    def _save_job(self, job: JobState):
+        """保存任务到数据库"""
+        try:
+            db.save_job(job)
+        except Exception as e:
+            print(f"保存任务失败: {e}")
 
     # ========== 公共接口 ==========
 
-    def create_job(self, url: str) -> str:
+    def create_job(self, url: str, force_single: bool = False) -> str:
         """
         创建新的下载任务 (下载整个播放列表)
         
         Args:
             url: YouTube 链接
+            force_single: 强制作为单曲下载，忽略播放列表参数
             
         Returns:
             任务 ID
         """
         job_id = uuid.uuid4().hex
         job = JobState(id=job_id, url=url, message="已创建任务")
+        job.force_single = force_single
         
         with self._lock:
             self._jobs[job_id] = job
+        
+        # 保存到数据库
+        self._save_job(job)
 
         # 启动后台下载线程
         thread = threading.Thread(target=self._run_job, args=(job_id, None), daemon=True)
@@ -123,6 +171,9 @@ class JobManager:
         
         with self._lock:
             self._jobs[job_id] = job
+        
+        # 保存到数据库
+        self._save_job(job)
 
         # 启动后台下载线程
         thread = threading.Thread(target=self._run_job, args=(job_id, video_urls), daemon=True)
@@ -134,6 +185,11 @@ class JobManager:
         """获取任务状态"""
         with self._lock:
             return self._jobs.get(job_id)
+
+    def list_jobs(self) -> list[JobState]:
+        """获取所有任务列表"""
+        with self._lock:
+            return list(self._jobs.values())
 
     def cancel_job(self, job_id: str) -> bool:
         """
@@ -240,6 +296,12 @@ class JobManager:
         with self._lock:
             self._procs.pop(job_id, None)
             self._jobs.pop(job_id, None)
+        
+        # 从数据库中删除
+        try:
+            db.delete_job(job_id)
+        except Exception as e:
+            print(f"删除任务数据库记录失败: {e}")
 
         # 删除任务目录
         job_dir = JOBS_DIR / job_id
@@ -262,6 +324,111 @@ class JobManager:
             if job and job.zip_path:
                 job.zip_path = None
                 job.updated_at = time.time()
+
+    def cleanup_old_jobs(self, max_age_days: int = 7) -> dict:
+        """
+        清理超过指定天数的已完成任务
+        
+        Args:
+            max_age_days: 最大保留天数，默认 7 天
+            
+        Returns:
+            清理结果统计
+        """
+        now = time.time()
+        max_age_seconds = max_age_days * 24 * 60 * 60
+        
+        jobs_to_delete = []
+        with self._lock:
+            for job_id, job in self._jobs.items():
+                # 只清理已完成/已取消/错误的任务
+                if job.status not in ('done', 'canceled', 'error'):
+                    continue
+                # 检查任务年龄
+                age = now - job.updated_at
+                if age > max_age_seconds:
+                    jobs_to_delete.append(job_id)
+        
+        deleted_count = 0
+        freed_bytes = 0
+        
+        for job_id in jobs_to_delete:
+            # 计算释放的空间
+            job_dir = JOBS_DIR / job_id
+            if job_dir.exists():
+                for f in job_dir.rglob('*'):
+                    if f.is_file():
+                        freed_bytes += f.stat().st_size
+            
+            # 删除任务
+            self.delete_job(job_id)
+            deleted_count += 1
+        
+        return {
+            'deleted_count': deleted_count,
+            'freed_bytes': freed_bytes,
+            'freed_mb': round(freed_bytes / (1024 * 1024), 2),
+        }
+
+    def cleanup_all_completed_jobs(self) -> dict:
+        """
+        清理所有已完成的任务（一键清理）
+        
+        Returns:
+            清理结果统计
+        """
+        jobs_to_delete = []
+        with self._lock:
+            for job_id, job in self._jobs.items():
+                # 只清理已完成/已取消/错误的任务
+                if job.status in ('done', 'canceled', 'error'):
+                    jobs_to_delete.append(job_id)
+        
+        deleted_count = 0
+        freed_bytes = 0
+        
+        for job_id in jobs_to_delete:
+            # 计算释放的空间
+            job_dir = JOBS_DIR / job_id
+            if job_dir.exists():
+                for f in job_dir.rglob('*'):
+                    if f.is_file():
+                        freed_bytes += f.stat().st_size
+            
+            # 删除任务
+            self.delete_job(job_id)
+            deleted_count += 1
+        
+        return {
+            'deleted_count': deleted_count,
+            'freed_bytes': freed_bytes,
+            'freed_mb': round(freed_bytes / (1024 * 1024), 2),
+        }
+
+    def get_disk_usage(self) -> dict:
+        """
+        获取任务目录的磁盘使用情况
+        
+        Returns:
+            磁盘使用统计
+        """
+        total_bytes = 0
+        job_count = 0
+        
+        if JOBS_DIR.exists():
+            for job_dir in JOBS_DIR.iterdir():
+                if job_dir.is_dir():
+                    job_count += 1
+                    for f in job_dir.rglob('*'):
+                        if f.is_file():
+                            total_bytes += f.stat().st_size
+        
+        return {
+            'job_count': job_count,
+            'total_bytes': total_bytes,
+            'total_mb': round(total_bytes / (1024 * 1024), 2),
+            'total_gb': round(total_bytes / (1024 * 1024 * 1024), 2),
+        }
 
     # ========== 内部方法 ==========
 
@@ -439,10 +606,11 @@ class JobManager:
             return
 
         # 创建目录
+        # 下载到 JOBS_DIR 临时目录，完成后移动到用户下载目录
         job_dir = JOBS_DIR / job_id
-        output_dir = get_download_dir() / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        # output_dir 指向临时目录，完成后移动到用户下载目录
+        output_dir = job_dir
 
         with self._lock:
             job = self._jobs.get(job_id)
@@ -451,7 +619,8 @@ class JobManager:
                 job.updated_at = time.time()
 
         # 判断是播放列表还是单曲
-        is_playlist = looks_like_playlist_url(job.url)
+        # 如果设置了 force_single，则强制作为单曲处理
+        is_playlist = False if job.force_single else looks_like_playlist_url(job.url)
 
         # 获取元数据并设置输出模板
         if is_playlist:
@@ -467,6 +636,7 @@ class JobManager:
             return
 
         # 构建 yt-dlp 命令 (下载整个播放列表)
+        proxy_args = ["--proxy", PROXY_URL] if PROXY_URL else []
         cmd = [
             str(YTDLP_BIN),
             "--yes-playlist" if is_playlist else "--no-playlist",
@@ -477,6 +647,10 @@ class JobManager:
             "--audio-quality", "0",
             "--newline",
             "--no-mtime",
+            "--concurrent-fragments", str(_CONCURRENT_FRAGMENTS),
+            "--retries", "3",
+            "--socket-timeout", "15",
+            *proxy_args,
             "--output", output_tpl,
             job.url,
         ]
@@ -581,6 +755,7 @@ class JobManager:
                     j.updated_at = time.time()
 
                 video_url = video_urls[idx]
+                proxy_args = ["--proxy", PROXY_URL] if PROXY_URL else []
                 cmd = [
                     str(YTDLP_BIN),
                     "--no-playlist",
@@ -591,6 +766,10 @@ class JobManager:
                     "--audio-quality", "0",
                     "--newline",
                     "--no-mtime",
+                    "--concurrent-fragments", str(_CONCURRENT_FRAGMENTS),
+                    "--retries", "3",
+                    "--socket-timeout", "15",
+                    *proxy_args,
                     "--output", output_tpl,
                     video_url,
                 ]
@@ -732,7 +911,7 @@ class JobManager:
 
     def _finalize_job(self, job_id: str, output_dir: Path) -> None:
         """
-        完成任务：检查状态并打包 ZIP
+        完成任务：移动文件到用户下载目录，检查状态并打包 ZIP
         """
         with self._lock:
             job = self._jobs.get(job_id)
@@ -746,8 +925,11 @@ class JobManager:
                 self._try_package_zip(job_id, output_dir)
                 return
 
-        # 打包 ZIP
-        zip_path = self._package_zip(job_id, output_dir)
+        # 将 MP3 文件移动到用户下载目录
+        final_dir = self._move_to_download_dir(job_id, output_dir)
+
+        # 打包 ZIP (从最终目录打包)
+        zip_path = self._package_zip(job_id, final_dir)
         if not zip_path:
             with self._lock:
                 job = self._jobs.get(job_id)
@@ -756,6 +938,12 @@ class JobManager:
                     job.message = "打包 ZIP 失败"
                     job.updated_at = time.time()
             return
+
+        # 更新 output_dir 为最终目录
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job:
+                job.output_dir = str(final_dir)
 
         # 标记完成
         with self._lock:
@@ -766,6 +954,56 @@ class JobManager:
                 job.message = "完成"
                 job.zip_path = zip_path
                 job.updated_at = time.time()
+        
+        # 保存到数据库
+        if job:
+            self._save_job(job)
+
+    def _move_to_download_dir(self, job_id: str, temp_dir: Path) -> Path:
+        """
+        将 MP3 文件从临时目录移动到用户下载目录
+        
+        Args:
+            job_id: 任务 ID
+            temp_dir: 临时目录 (JOBS_DIR/job_id)
+            
+        Returns:
+            最终目录路径
+        """
+        import shutil
+        
+        final_dir = get_download_dir() / job_id
+        final_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 移动所有 MP3 文件（保留目录结构）
+        for mp3_file in temp_dir.rglob("*.mp3"):
+            # 计算相对路径
+            rel_path = mp3_file.relative_to(temp_dir)
+            dest_path = final_dir / rel_path
+            
+            # 确保目标目录存在
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            try:
+                shutil.move(str(mp3_file), str(dest_path))
+            except Exception:
+                # 如果移动失败，尝试复制
+                try:
+                    shutil.copy2(str(mp3_file), str(dest_path))
+                    mp3_file.unlink()
+                except Exception:
+                    pass
+        
+        # 复制元数据文件到最终目录
+        for meta_file in ["__meta.json", "__track_thumbnails.json"]:
+            src = temp_dir / meta_file
+            if src.exists():
+                try:
+                    shutil.copy2(str(src), str(final_dir / meta_file))
+                except Exception:
+                    pass
+        
+        return final_dir
 
     def _execute_download(self, job_id: str, cmd: list[str], output_dir: Path) -> None:
         """
@@ -876,6 +1114,10 @@ class JobManager:
                 job.message = "完成"
                 job.zip_path = zip_path
                 job.updated_at = time.time()
+        
+        # 保存到数据库
+        if job:
+            self._save_job(job)
 
     def _fetch_playlist_meta(self, job_id: str, url: str, output_dir: Path) -> None:
         """获取播放列表元数据"""
@@ -884,11 +1126,10 @@ class JobManager:
             return
 
         title = meta.get("title")
+        entries = meta.get("entries")
         total = meta.get("playlist_count")
-        if total is None:
-            entries = meta.get("entries")
-            if isinstance(entries, list):
-                total = len(entries)
+        if total is None and isinstance(entries, list):
+            total = len(entries)
 
         thumb_url = select_best_thumbnail_url(meta)
 
@@ -904,6 +1145,25 @@ class JobManager:
                 job.updated_at = time.time()
 
         write_job_meta(output_dir, str(title) if title else None, thumb_url)
+        
+        # 保存每个曲目的封面 URL
+        if isinstance(entries, list) and entries:
+            import json
+            thumbnails = {}
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                entry_title = entry.get("title")
+                entry_thumb = select_best_thumbnail_url(entry)
+                if entry_title and entry_thumb:
+                    thumbnails[entry_title] = entry_thumb
+            
+            if thumbnails:
+                try:
+                    thumbs_file = output_dir / "__track_thumbnails.json"
+                    thumbs_file.write_text(json.dumps(thumbnails, ensure_ascii=False), encoding="utf-8")
+                except Exception:
+                    pass
 
     def _fetch_single_meta(self, job_id: str, url: str, output_dir: Path) -> None:
         """获取单曲元数据"""

@@ -1,14 +1,20 @@
 import type { ChangeEvent } from 'react'
 import { Download, FolderDown, ListMusic, Loader, Trash2, X } from 'lucide-react'
+import type { JobListItem } from '../api'
 import type { DownloadItem, JobMeta } from '../types'
 import { statusText } from '../utils'
 import { DownloadItemsList } from './DownloadItemsList'
+import { JobList } from './JobList'
+import { DownloadProgressCard } from './DownloadProgressCard'
 
 interface DownloadPageProps {
   urlInput: string
   onUrlChange: (value: string) => void
+  tryParsePlaylist: boolean
+  onTryParsePlaylistChange: (value: boolean) => void
   onStart: () => void
   startLoading: boolean
+  parseStage: string
   isRunning: boolean
   jobMeta: JobMeta | null
   jobStatus: string
@@ -24,13 +30,21 @@ interface DownloadPageProps {
   onDelete: () => void
   onPauseResume: () => void
   onPauseItem: (index: number, isPaused: boolean) => void
+  allJobs: JobListItem[]
+  onSelectJob: (jobId: string) => void
+  onDeleteJob: (jobId: string) => void
+  onOpenFolder: (jobId: string) => void
+  onCancelJob: (jobId: string) => void
 }
 
 export function DownloadPage({
   urlInput,
   onUrlChange,
+  tryParsePlaylist,
+  onTryParsePlaylistChange,
   onStart,
   startLoading,
+  parseStage,
   isRunning,
   jobMeta,
   jobStatus,
@@ -46,6 +60,11 @@ export function DownloadPage({
   onDelete,
   onPauseResume,
   onPauseItem,
+  allJobs,
+  onSelectJob,
+  onDeleteJob,
+  onOpenFolder,
+  onCancelJob,
 }: DownloadPageProps) {
   const albumHasAny = Boolean(jobMeta?.title || jobMeta?.thumbnail_url || jobMeta?.total_items)
 
@@ -70,8 +89,40 @@ export function DownloadPage({
         </button>
       </div>
 
-      {/* 专辑信息 */}
-      {albumHasAny && (
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          checked={tryParsePlaylist}
+          onChange={(e) => onTryParsePlaylistChange(e.target.checked)}
+          disabled={startLoading || isRunning}
+        />
+        <span>尝试解析为专辑/播放列表</span>
+      </label>
+
+      {/* 解析中的提示 */}
+      {startLoading && !currentJobId && (
+        <div className="parsing-hint">
+          <Loader className="spin" size={20} />
+          <div className="parsing-hint-content">
+            <span className="parsing-hint-title">{parseStage || '正在处理...'}</span>
+            <span className="parsing-hint-sub">请稍候，这可能需要一些时间</span>
+          </div>
+        </div>
+      )}
+
+      {/* 进度卡片（下载中显示） */}
+      {isRunning && (
+        <DownloadProgressCard
+          jobMeta={jobMeta}
+          jobStatus={jobStatus}
+          jobProgress={jobProgress}
+          jobPaused={jobPaused}
+          downloadItems={jobDownloadItems}
+        />
+      )}
+
+      {/* 已完成时显示专辑信息 */}
+      {!isRunning && albumHasAny && (
         <div className="album-info">
           {jobMeta?.thumbnail_url && (
             <img src={jobMeta.thumbnail_url} alt="封面" className="album-cover" />
@@ -81,16 +132,6 @@ export function DownloadPage({
             {jobMeta?.total_items && <p>{jobMeta.total_items} 首曲目</p>}
             <p className="status-text">{statusText(jobStatus)}</p>
           </div>
-        </div>
-      )}
-
-      {/* 进度条 */}
-      {isRunning && (
-        <div className="progress-section">
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${jobProgress}%` }} />
-          </div>
-          <span className="progress-text">{jobProgress.toFixed(0)}%</span>
         </div>
       )}
 
@@ -143,6 +184,16 @@ export function DownloadPage({
           />
         </div>
       )}
+
+      {/* 任务列表 */}
+      <JobList
+        jobs={allJobs}
+        currentJobId={currentJobId}
+        onSelectJob={onSelectJob}
+        onDeleteJob={onDeleteJob}
+        onOpenFolder={onOpenFolder}
+        onCancelJob={onCancelJob}
+      />
     </div>
   )
 }

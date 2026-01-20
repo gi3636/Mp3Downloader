@@ -53,3 +53,4 @@ tauri-app/src-tauri/target/release/bundle/
 *.AppImage
 *.tar.gz
 
+static/assets/*
