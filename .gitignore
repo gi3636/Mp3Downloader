@@ -30,3 +30,25 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+*.spec
+
+# Tauri / Rust
+tauri-app/src-tauri/target/
+tauri-app/src-tauri/binaries/
+tauri-app/node_modules/
+tauri-app/dist/
+
+# Tauri 打包产物 (bundle)
+tauri-app/src-tauri/target/release/bundle/
+
+# 打包文件
+*.zip
+*.dmg
+*.app
+*.exe
+*.msi
+*.deb
+*.rpm
+*.AppImage
+*.tar.gz
+

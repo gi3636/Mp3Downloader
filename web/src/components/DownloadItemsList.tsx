@@ -1,6 +1,7 @@
 import { Pause, PauseCircle, Play, PlayCircle } from 'lucide-react'
 import type { DownloadItem } from '../types'
-import { downloadItemStatusText } from '../utils'
+import { downloadItemStatusText, formatBytes } from '../utils'
+import { CoverImage } from './CoverImage'
 
 interface Props {
   items: DownloadItem[]
@@ -52,17 +53,11 @@ export function DownloadItemsList({
 
           return (
             <div key={`${it.index}-${it.url}`} className={`download-item ${it.status}`}>
-              <img
-                className="download-item-cover"
-                src={it.thumbnail || ''}
-                alt=""
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
-                }}
-              />
+              <CoverImage className="download-item-cover" src={it.thumbnail || null} alt="" />
               <div className="download-item-index">{it.index}</div>
               <div className="download-item-info">
                 <div className="download-item-title">{it.title}</div>
+                <div className="download-item-meta">{formatBytes(it.size_bytes)}</div>
                 {showProgress && (
                   <div className="download-item-progress">
                     <div

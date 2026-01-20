@@ -13,8 +13,9 @@ from pathlib import Path
 
 from flask import Flask, jsonify, request, send_file
 
-from config import DOWNLOAD_DIR, YTDLP_BIN
+from config import YTDLP_BIN
 from job_manager import JobManager
+from settings_service import get_download_dir, get_all_settings, update_settings
 from tracks_service import (
     b64_decode_path,
     list_mp3_tracks,
@@ -323,7 +324,8 @@ def delete_job_track(job_id: str, track_id: str):
 @app.get("/api/library/tracks")
 def list_library_tracks():
     """获取音乐库所有曲目"""
-    tracks = list_mp3_tracks(DOWNLOAD_DIR)
+    download_dir = get_download_dir()
+    tracks = list_mp3_tracks(download_dir)
     
     for t in tracks:
         rel = t.get("rel_path")
@@ -334,7 +336,7 @@ def list_library_tracks():
         if isinstance(rel, str):
             parts = rel.split("/")
             if parts:
-                job_folder = DOWNLOAD_DIR / parts[0]
+                job_folder = download_dir / parts[0]
                 meta = read_job_meta(job_folder)
                 if meta:
                     if meta.get("thumbnail_url"):
@@ -369,7 +371,7 @@ def stream_library_track(track_id: str):
     if not rel:
         return jsonify({"error": "invalid track"}), 400
 
-    fp = resolve_track_path(DOWNLOAD_DIR, rel)
+    fp = resolve_track_path(get_download_dir(), rel)
     if not fp:
         return jsonify({"error": "file not found"}), 404
 
@@ -379,11 +381,12 @@ def stream_library_track(track_id: str):
 @app.post("/api/library/tracks/<track_id>/delete")
 def delete_library_track(track_id: str):
     """删除音乐库中的曲目"""
+    download_dir = get_download_dir()
     rel = b64_decode_path(track_id)
     if not rel:
         return jsonify({"error": "invalid track"}), 400
 
-    fp = resolve_track_path(DOWNLOAD_DIR, rel)
+    fp = resolve_track_path(download_dir, rel)
     if not fp:
         return jsonify({"error": "file not found"}), 404
 
@@ -395,13 +398,203 @@ def delete_library_track(track_id: str):
     # 清理空目录
     try:
         parent = fp.parent
-        while parent != DOWNLOAD_DIR and parent.exists() and not any(parent.iterdir()):
+        while parent != download_dir and parent.exists() and not any(parent.iterdir()):
             parent.rmdir()
             parent = parent.parent
     except Exception:
         pass
 
     return jsonify({"ok": True})
+
+
+# ========== API: 设置管理 ==========
+
+@app.get("/api/settings")
+def get_settings():
+    """获取所有设置"""
+    settings = get_all_settings()
+    return jsonify(settings)
+
+
+@app.post("/api/settings")
+def save_settings():
+    """保存设置"""
+    data = request.get_json(silent=True) or {}
+    
+    # 验证下载目录
+    download_dir = data.get("download_dir")
+    if download_dir:
+        # 展开用户目录
+        expanded_path = Path(download_dir).expanduser()
+        try:
+            expanded_path.mkdir(parents=True, exist_ok=True)
+            data["download_dir"] = str(expanded_path)
+        except Exception as e:
+            return jsonify({"error": f"无法创建目录: {e}"}), 400
+    
+    update_settings(data)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/settings/check-migration")
+def check_migration():
+    """
+    检查旧目录是否有文件需要迁移
+    请求体: { "new_dir": "新目录路径" }
+    """
+    import shutil
+    
+    data = request.get_json(silent=True) or {}
+    new_dir = data.get("new_dir", "").strip()
+    
+    if not new_dir:
+        return jsonify({"error": "新目录不能为空"}), 400
+    
+    new_path = Path(new_dir).expanduser()
+    old_path = get_download_dir()
+    
+    # 如果新旧路径相同，不需要迁移
+    if new_path.resolve() == old_path.resolve():
+        return jsonify({"need_migration": False, "file_count": 0, "total_size": 0})
+    
+    # 检查旧目录是否有文件
+    file_count = 0
+    total_size = 0
+    
+    if old_path.exists():
+        for f in old_path.rglob("*"):
+            if f.is_file():
+                file_count += 1
+                total_size += f.stat().st_size
+    
+    return jsonify({
+        "need_migration": file_count > 0,
+        "file_count": file_count,
+        "total_size": total_size,
+        "old_dir": str(old_path),
+        "new_dir": str(new_path),
+    })
+
+
+@app.post("/api/settings/migrate-files")
+def migrate_files():
+    """
+    将旧目录的文件迁移到新目录
+    请求体: { "new_dir": "新目录路径", "delete_source": true/false }
+    """
+    import shutil
+    
+    data = request.get_json(silent=True) or {}
+    new_dir = data.get("new_dir", "").strip()
+    delete_source = data.get("delete_source", True)  # 默认删除源文件
+    
+    if not new_dir:
+        return jsonify({"error": "新目录不能为空"}), 400
+    
+    new_path = Path(new_dir).expanduser()
+    old_path = get_download_dir()
+    
+    # 如果新旧路径相同，不需要迁移
+    if new_path.resolve() == old_path.resolve():
+        return jsonify({"ok": True, "migrated_count": 0})
+    
+    # 确保新目录存在
+    try:
+        new_path.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        return jsonify({"error": f"无法创建新目录: {e}"}), 400
+    
+    # 迁移文件
+    migrated_count = 0
+    errors = []
+    
+    if old_path.exists():
+        for item in old_path.iterdir():
+            try:
+                dest = new_path / item.name
+                if item.is_dir():
+                    if dest.exists():
+                        # 合并目录内容
+                        for sub in item.rglob("*"):
+                            if sub.is_file():
+                                rel = sub.relative_to(item)
+                                sub_dest = dest / rel
+                                sub_dest.parent.mkdir(parents=True, exist_ok=True)
+                                if delete_source:
+                                    shutil.move(str(sub), str(sub_dest))
+                                else:
+                                    shutil.copy2(str(sub), str(sub_dest))
+                                migrated_count += 1
+                        # 删除空的源目录（仅当 delete_source 为 True）
+                        if delete_source:
+                            shutil.rmtree(str(item), ignore_errors=True)
+                    else:
+                        if delete_source:
+                            shutil.move(str(item), str(dest))
+                        else:
+                            shutil.copytree(str(item), str(dest))
+                        migrated_count += 1
+                else:
+                    if delete_source:
+                        shutil.move(str(item), str(dest))
+                    else:
+                        shutil.copy2(str(item), str(dest))
+                    migrated_count += 1
+            except Exception as e:
+                errors.append(f"{item.name}: {e}")
+    
+    if errors:
+        return jsonify({
+            "ok": False,
+            "migrated_count": migrated_count,
+            "errors": errors[:5],  # 只返回前5个错误
+        }), 500
+    
+    # 迁移完成后，尝试删除旧目录（仅当 delete_source 为 True 且目录为空）
+    if delete_source:
+        try:
+            remaining = list(old_path.iterdir())
+            # 过滤掉隐藏文件和系统文件
+            remaining = [f for f in remaining if not f.name.startswith('.')]
+            if not remaining:
+                shutil.rmtree(str(old_path), ignore_errors=True)
+        except Exception:
+            pass
+    
+    return jsonify({"ok": True, "migrated_count": migrated_count})
+
+
+@app.post("/api/settings/select-folder")
+def select_folder():
+    """
+    打开文件夹选择对话框（仅在 Tauri 环境下有效）
+    这个 API 返回一个提示，因为实际的文件夹选择需要在前端通过 Tauri API 完成
+    """
+    return jsonify({
+        "message": "请使用 Tauri 文件对话框选择文件夹",
+        "current_dir": str(get_download_dir())
+    })
+
+
+@app.post("/api/settings/open-folder")
+def open_folder():
+    """在系统文件管理器中打开下载目录"""
+    import subprocess
+    import platform
+    
+    download_dir = get_download_dir()
+    
+    try:
+        system = platform.system()
+        if system == "Darwin":  # macOS
+            subprocess.run(["open", str(download_dir)], check=True)
+        elif system == "Windows":
+            subprocess.run(["explorer", str(download_dir)], check=True)
+        else:  # Linux
+            subprocess.run(["xdg-open", str(download_dir)], check=True)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": f"无法打开目录: {e}"}), 500
 
 
 # ========== 启动入口 ==========

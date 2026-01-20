@@ -247,8 +247,35 @@ def fetch_playlist_entries(url: str) -> dict | None:
         video_id = entry.get("id") or entry.get("url")
         title = entry.get("title") or f"Track {idx + 1}"
         duration = entry.get("duration")
-        thumbnail = entry.get("thumbnail")
         video_url = entry.get("url") or entry.get("webpage_url")
+        
+        # 获取缩略图：优先从 thumbnails 数组获取最佳质量
+        thumbnail = entry.get("thumbnail")
+        if not thumbnail:
+            thumbs = entry.get("thumbnails")
+            if isinstance(thumbs, list) and thumbs:
+                # 选择最大的缩略图
+                best = None
+                best_area = -1
+                for t in thumbs:
+                    if not isinstance(t, dict):
+                        continue
+                    t_url = t.get("url")
+                    if not t_url:
+                        continue
+                    # 跳过 no_thumbnail 占位图
+                    if "no_thumbnail" in t_url:
+                        continue
+                    w = t.get("width") or 0
+                    h = t.get("height") or 0
+                    try:
+                        area = int(w) * int(h)
+                    except Exception:
+                        area = 0
+                    if area >= best_area:
+                        best_area = area
+                        best = t_url
+                thumbnail = best
         
         # 构建完整 URL
         if video_id and not video_url:

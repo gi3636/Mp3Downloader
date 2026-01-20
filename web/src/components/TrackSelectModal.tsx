@@ -3,6 +3,7 @@ import { Check, CheckSquare, Download, Square } from 'lucide-react'
 import type { PlaylistInfo } from '../types'
 import { Modal } from './Modal'
 import { formatDuration } from '../utils'
+import { CoverImage } from './CoverImage'
 
 export interface TrackSelection {
   urls: string[]
@@ -33,7 +34,7 @@ export function TrackSelectModal({ open, playlist, onClose, onConfirm }: Props) 
   }
 
   const selectAll = () => {
-    setSelected(new Set(entries.map((e) => e.url).filter(Boolean)))
+    setSelected(new Set(entries.map((e) => e.url).filter((u): u is string => Boolean(u))))
   }
 
   const selectNone = () => setSelected(new Set())
@@ -41,7 +42,8 @@ export function TrackSelectModal({ open, playlist, onClose, onConfirm }: Props) 
   const handleConfirm = () => {
     const urls = Array.from(selected)
     const titles = urls.map((u) => entries.find((e) => e.url === u)?.title || '')
-    const thumbnails = urls.map((u) => entries.find((e) => e.url === u)?.thumbnail || defaultThumb)
+    // 只使用每个视频自己的封面，不使用播放列表封面作为回退
+    const thumbnails = urls.map((u) => entries.find((e) => e.url === u)?.thumbnail || '')
     onConfirm({ urls, titles, thumbnails })
     setSelected(new Set())
   }
@@ -100,12 +102,7 @@ export function TrackSelectModal({ open, playlist, onClose, onConfirm }: Props) 
               onClick={() => toggle(e.url)}
             >
               <div className="track-select-checkbox">{isSelected && <Check size={14} />}</div>
-              <img
-                className="track-select-cover"
-                alt=""
-                src={cover}
-                onError={(ev) => ((ev.target as HTMLImageElement).style.display = 'none')}
-              />
+              <CoverImage className="track-select-cover" src={cover || null} alt="" />
               <span className="track-select-index">{e.index}</span>
               <div className="track-select-info">
                 <div className="track-select-title">{e.title}</div>

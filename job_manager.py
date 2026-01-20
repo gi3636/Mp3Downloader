@@ -20,8 +20,9 @@ from pathlib import Path
 from subprocess import PIPE, Popen
 from collections import deque
 
-from config import ARCHIVE_FILE, DOWNLOAD_DIR, JOBS_DIR, YTDLP_BIN
+from config import ARCHIVE_FILE, JOBS_DIR, YTDLP_BIN
 from models import JobState, DownloadItem
+from settings_service import get_download_dir
 from tracks_service import write_job_meta, write_track_meta
 from ytdlp_service import (
     fetch_playlist_metadata,
@@ -45,7 +46,7 @@ _ITEM_RE = re.compile(
     re.IGNORECASE,
 )
 
-_SELECTED_DOWNLOAD_CONCURRENCY = int(os.environ.get("MP3DL_SELECTED_CONCURRENCY", "3"))
+_SELECTED_DOWNLOAD_CONCURRENCY = max(1, min(15, int(os.environ.get("MP3DL_SELECTED_CONCURRENCY", "3"))))
 
 
 class JobManager:
@@ -439,7 +440,7 @@ class JobManager:
 
         # 创建目录
         job_dir = JOBS_DIR / job_id
-        output_dir = DOWNLOAD_DIR / job_id
+        output_dir = get_download_dir() / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -628,7 +629,7 @@ class JobManager:
                     if j and j.paused and not j.cancel_requested:
                         time.sleep(0.5)
 
-        workers = max(1, min(8, _SELECTED_DOWNLOAD_CONCURRENCY))
+        workers = max(1, min(15, _SELECTED_DOWNLOAD_CONCURRENCY))
         threads: list[threading.Thread] = []
         for _ in range(workers):
             t = threading.Thread(target=worker, daemon=True)

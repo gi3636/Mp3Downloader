@@ -1,11 +1,21 @@
 import type { CreateJobResponse, JobResponse, ResolveResponse, TracksResponse } from './types'
 
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const res = await fetch(input, init)
+  let res: Response
+  try {
+    res = await fetch(input, init)
+  } catch (e) {
+    console.error('Network error:', e)
+    throw new Error('网络连接失败，请检查后端服务是否运行')
+  }
+  
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     const msg = (data as any)?.error || (data as any)?.message || 'Request failed'
-    throw new Error(msg)
+    const err = new Error(msg) as any
+    err.status = res.status
+    err.data = data
+    throw err
   }
   return data as T
 }
@@ -68,4 +78,49 @@ export function getLibraryTracks() {
 
 export function deleteLibraryTrack(trackId: string) {
   return fetchJson<{ ok: boolean }>(`/api/library/tracks/${trackId}/delete`, { method: 'POST' })
+}
+
+// 设置相关 API
+export interface Settings {
+  download_dir: string
+}
+
+export function getSettings() {
+  return fetchJson<Settings>('/api/settings')
+}
+
+export function saveSettings(settings: Partial<Settings>) {
+  return fetchJson<{ ok: boolean }>('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  })
+}
+
+export interface MigrationCheck {
+  need_migration: boolean
+  file_count: number
+  total_size: number
+  old_dir: string
+  new_dir: string
+}
+
+export function checkMigration(newDir: string) {
+  return fetchJson<MigrationCheck>('/api/settings/check-migration', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_dir: newDir }),
+  })
+}
+
+export function migrateFiles(newDir: string, deleteSource: boolean = true) {
+  return fetchJson<{ ok: boolean; migrated_count: number }>('/api/settings/migrate-files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_dir: newDir, delete_source: deleteSource }),
+  })
+}
+
+export function openDownloadFolder() {
+  return fetchJson<{ ok: boolean }>('/api/settings/open-folder', { method: 'POST' })
 }

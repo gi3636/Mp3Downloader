@@ -1,4 +1,4 @@
-import { Pause, Play, Shuffle, SkipBack, SkipForward } from 'lucide-react'
+import { Pause, Play, Shuffle, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react'
 import { formatDuration } from '../utils'
 
 interface Props {
@@ -8,12 +8,16 @@ interface Props {
   duration: number
   seeking: boolean
   seekTime: number
+  volume: number
+  muted: boolean
   onPlayPause: () => void
   onPrev: () => void
   onNext: () => void
   onToggleShuffle: () => void
   onSeekChange: (time: number) => void
   onSeekCommit: (time: number) => void
+  onVolumeChange: (volume: number) => void
+  onToggleMute: () => void
 }
 
 export function PlayerControls({
@@ -23,16 +27,21 @@ export function PlayerControls({
   duration,
   seeking,
   seekTime,
+  volume,
+  muted,
   onPlayPause,
   onPrev,
   onNext,
   onToggleShuffle,
   onSeekChange,
   onSeekCommit,
+  onVolumeChange,
+  onToggleMute,
 }: Props) {
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0
   const displayTime = seeking ? seekTime : currentTime
   const pct = safeDuration > 0 ? Math.max(0, Math.min(100, (displayTime / safeDuration) * 100)) : 0
+  const volumePct = muted ? 0 : volume * 100
 
   return (
     <div className="player-bar">
@@ -74,6 +83,24 @@ export function PlayerControls({
           onTouchEnd={() => onSeekCommit(seekTime)}
         />
         <span className="player-time">{formatDuration(safeDuration)}</span>
+      </div>
+
+      <div className="player-volume">
+        <button className="player-btn" type="button" title={muted ? '取消静音' : '静音'} onClick={onToggleMute}>
+          {muted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        </button>
+        <input
+          className="volume-range"
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={muted ? 0 : volume}
+          style={{
+            background: `linear-gradient(90deg, var(--accent) 0%, var(--accent) ${volumePct}%, rgba(255,255,255,0.18) ${volumePct}%, rgba(255,255,255,0.18) 100%)`,
+          }}
+          onChange={(e) => onVolumeChange(Number(e.target.value))}
+        />
       </div>
     </div>
   )

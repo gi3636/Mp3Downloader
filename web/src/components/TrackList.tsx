@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react'
 import type { Track } from '../types'
 import { formatBytes, formatDuration } from '../utils'
+import { CoverImage } from './CoverImage'
 
 interface Props {
   tracks: Track[]
@@ -20,14 +21,7 @@ export function TrackList({ tracks, playingId, onPlay, onDelete }: Props) {
             className={`track-item ${playing ? 'playing' : ''}`}
             onClick={() => onPlay(t)}
           >
-            <img
-              className="track-cover"
-              alt=""
-              src={t.cover_url || ''}
-              onError={(e) => {
-                ;(e.target as HTMLImageElement).style.display = 'none'
-              }}
-            />
+            <CoverImage className="track-cover" src={t.cover_url || null} alt="" />
             <div className="track-info">
               <div className="track-title">{t.title}</div>
               <div className="track-duration">
