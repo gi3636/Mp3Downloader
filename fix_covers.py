@@ -11,7 +11,8 @@ import sys
 from pathlib import Path
 from subprocess import run, TimeoutExpired
 
-from config import DOWNLOAD_DIR, YTDLP_BIN
+from config import YTDLP_BIN
+from settings_service import get_download_dir
 
 
 def search_youtube_video(title: str) -> str | None:
@@ -138,11 +139,14 @@ def fix_covers_for_job(job_dir: Path) -> int:
 def main():
     print("🔍 扫描下载目录...")
     
-    if not DOWNLOAD_DIR.exists():
+    download_dir = get_download_dir()
+    print(f"📁 下载目录: {download_dir}")
+    
+    if not download_dir.exists():
         print("❌ 下载目录不存在")
         return
     
-    job_dirs = [d for d in DOWNLOAD_DIR.iterdir() if d.is_dir()]
+    job_dirs = [d for d in download_dir.iterdir() if d.is_dir()]
     
     if not job_dirs:
         print("❌ 没有找到任何下载任务")

@@ -25,6 +25,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+.windsurfrules
 
 # 构建产物
 dist/

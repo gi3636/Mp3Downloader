@@ -1,43 +1,25 @@
-import type { ChangeEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Download,
-  FolderDown,
   Library,
-  ListMusic,
-  Loader,
   Music,
-  Search,
   Settings,
-  Trash2,
-  X,
 } from 'lucide-react'
 import type { DownloadItem, JobMeta, PlaylistInfo, ResolveChoice, Track } from './types'
 import * as api from './api'
 import { statusText } from './utils'
-import { Toast, type ToastType } from './components/Toast'
+import { Toast } from './components/Toast'
 import { ChoiceModal } from './components/ChoiceModal'
+import { ConfirmModal } from './components/ConfirmModal'
+import { useToast } from './hooks/useToast'
 import { TrackSelectModal, type TrackSelection } from './components/TrackSelectModal'
-import { DownloadItemsList } from './components/DownloadItemsList'
-import { TrackList } from './components/TrackList'
 import { NowPlaying } from './components/NowPlaying'
 import { PlayerControls } from './components/PlayerControls'
 import { SettingsModal } from './components/SettingsModal'
+import { DownloadPage } from './components/DownloadPage'
+import { LibraryPage, type SortMode, type AlbumGroup } from './components/LibraryPage'
 
 type Tab = 'download' | 'library'
-type SortMode = 'created_desc' | 'created_asc' | 'alpha_asc' | 'alpha_desc' | 'album'
-
-interface ToastMsg {
-  id: string
-  type: ToastType
-  message: string
-}
-
-interface AlbumGroup {
-  name: string
-  cover: string | null
-  tracks: Track[]
-}
 
 export default function App() {
   const PLAYBACK_KEY = 'mp3dl.playback.v1'
@@ -98,7 +80,7 @@ export default function App() {
   const [libMuted, setLibMuted] = useState(false)
 
   // Toast 通知
-  const [toasts, setToasts] = useState<ToastMsg[]>([])
+  const { toasts, pushToast } = useToast()
 
   // 轮询定时器
   const pollTimerRef = useRef<number | null>(null)
@@ -197,15 +179,6 @@ export default function App() {
     if (!libCurrentTrackId) return null
     return libTracks.find((t) => t.id === libCurrentTrackId) || null
   }, [libTracks, libCurrentTrackId])
-
-  // Toast 通知
-  function pushToast(message: string, type: ToastType = 'info') {
-    const id = `${Date.now()}-${Math.random()}`
-    setToasts((prev) => [...prev, { id, type, message }])
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((x) => x.id !== id))
-    }, 3000)
-  }
 
   // 选择专辑弹窗
   function openChoiceModal(choices: ResolveChoice[]) {
@@ -817,30 +790,15 @@ export default function App() {
       />
 
       {/* 删除确认弹窗 */}
-      {deleteConfirmOpen && (
-        <div className="modal visible">
-          <div className="modal-backdrop" onClick={cancelDeleteCurrentTrack} />
-          <div className="modal-content" style={{ maxWidth: '400px' }}>
-            <div className="modal-header">
-              <h3 className="modal-title">确认删除</h3>
-            </div>
-            <div className="modal-body">
-              <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-                确定要删除当前播放的歌曲吗？此操作不可撤销。
-              </p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" type="button" onClick={cancelDeleteCurrentTrack}>
-                取消
-              </button>
-              <button className="btn btn-danger" type="button" onClick={confirmDeleteCurrentTrack}>
-                <Trash2 size={16} />
-                删除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        title="确认删除"
+        message="确定要删除当前播放的歌曲吗？此操作不可撤销。"
+        confirmText="删除"
+        danger
+        onConfirm={confirmDeleteCurrentTrack}
+        onCancel={cancelDeleteCurrentTrack}
+      />
 
       {/* 隐藏的音频播放器 */}
       <audio ref={libPlayerRef} />
@@ -888,197 +846,45 @@ export default function App() {
 
       {/* 下载页面 */}
       {tab === 'download' && (
-        <div className="download-page">
-          <div className="input-row">
-            <input
-              type="text"
-              className="url-input"
-              placeholder="输入 YouTube 链接..."
-              value={urlInput}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setUrlInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleStart()}
-            />
-            <button
-              className="btn btn-primary"
-              onClick={handleStart}
-              disabled={startLoading || isRunning}
-            >
-              {startLoading ? <Loader className="spin" size={16} /> : <Download size={16} />}
-              {startLoading ? '解析中...' : '开始下载'}
-            </button>
-          </div>
-
-          {/* 专辑信息 */}
-          {albumHasAny && (
-            <div className="album-info">
-              {jobMeta?.thumbnail_url && (
-                <img src={jobMeta.thumbnail_url} alt="封面" className="album-cover" />
-              )}
-              <div className="album-details">
-                <h3>{jobMeta?.title || '未知专辑'}</h3>
-                {jobMeta?.total_items && <p>{jobMeta.total_items} 首曲目</p>}
-                <p className="status-text">{statusText(jobStatus)}</p>
-              </div>
-            </div>
-          )}
-
-          {/* 进度条 */}
-          {isRunning && (
-            <div className="progress-section">
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${jobProgress}%` }} />
-              </div>
-              <span className="progress-text">{jobProgress.toFixed(0)}%</span>
-            </div>
-          )}
-
-          {/* 操作按钮 */}
-          {currentJobId && (
-            <div className="action-buttons">
-              {isRunning && (
-                <button
-                  className="btn btn-danger"
-                  onClick={handleCancel}
-                  disabled={cancelLoading}
-                >
-                  {cancelLoading ? <Loader className="spin" size={16} /> : <X size={16} />}
-                  取消
-                </button>
-              )}
-              {jobDownloadUrl && (
-                <a href={jobDownloadUrl} className="btn btn-success" download>
-                  <FolderDown size={16} />
-                  下载 ZIP
-                </a>
-              )}
-              {!isRunning && (
-                <button
-                  className="btn btn-danger"
-                  onClick={handleDelete}
-                  disabled={deleteLoading}
-                >
-                  {deleteLoading ? <Loader className="spin" size={16} /> : <Trash2 size={16} />}
-                  删除任务
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* 下载队列 */}
-          {jobDownloadItems.length > 0 && (
-            <div className="download-queue">
-              <h4>
-                <ListMusic size={16} />
-                下载队列
-              </h4>
-              <DownloadItemsList
-                items={jobDownloadItems}
-                paused={jobPaused}
-                pauseLoading={pauseLoading}
-                isRunning={isRunning}
-                onPauseAll={handlePauseResume}
-                onPauseItem={handlePauseItem}
-              />
-            </div>
-          )}
-        </div>
+        <DownloadPage
+          urlInput={urlInput}
+          onUrlChange={setUrlInput}
+          onStart={handleStart}
+          startLoading={startLoading}
+          isRunning={isRunning}
+          jobMeta={jobMeta}
+          jobStatus={jobStatus}
+          jobProgress={jobProgress}
+          currentJobId={currentJobId}
+          jobDownloadUrl={jobDownloadUrl}
+          jobDownloadItems={jobDownloadItems}
+          jobPaused={jobPaused}
+          pauseLoading={pauseLoading}
+          cancelLoading={cancelLoading}
+          deleteLoading={deleteLoading}
+          onCancel={handleCancel}
+          onDelete={handleDelete}
+          onPauseResume={handlePauseResume}
+          onPauseItem={handlePauseItem}
+        />
       )}
 
       {/* 音乐库页面 */}
       {tab === 'library' && (
-        <div className="library-page">
-          {/* 工具栏 */}
-          <div className="library-toolbar">
-            <div className="search-box">
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="搜索..."
-                value={libSearch}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setLibSearch(e.target.value)}
-              />
-            </div>
-            <select
-              className="sort-select"
-              value={libSortMode}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                setLibSortMode(e.target.value as SortMode)
-              }
-            >
-              <option value="created_desc">最新添加</option>
-              <option value="created_asc">最早添加</option>
-              <option value="alpha_asc">A-Z</option>
-              <option value="alpha_desc">Z-A</option>
-              <option value="album">按专辑</option>
-            </select>
-          </div>
-
-          {/* 专辑模式布局 */}
-          {libSortMode === 'album' ? (
-            <div className="album-layout">
-              {/* 左侧曲目列表 */}
-              <div className="album-tracks-panel">
-                {selectedAlbum ? (
-                  <>
-                    <h4 className="album-tracks-title">
-                      <Music size={16} />
-                      {selectedAlbum}
-                    </h4>
-                    <TrackList
-                      tracks={currentPlaylist}
-                      playingId={libCurrentTrackId}
-                      onPlay={playTrack}
-                      onDelete={handleDeleteLibTrack}
-                    />
-                  </>
-                ) : (
-                  <div className="empty-hint">
-                    <Music size={32} />
-                    <p>选择右侧专辑查看曲目</p>
-                  </div>
-                )}
-              </div>
-
-              {/* 右侧专辑列表 */}
-              <div className="album-list-panel">
-                <h4 className="album-list-title">
-                  <Library size={16} />
-                  专辑列表
-                </h4>
-                <div className="album-grid">
-                  {albumGroups.map((group) => (
-                    <div
-                      key={group.name}
-                      className={`album-card ${selectedAlbum === group.name ? 'active' : ''}`}
-                      onClick={() => setSelectedAlbum(group.name)}
-                    >
-                      {group.cover ? (
-                        <img src={group.cover} alt={group.name} className="album-card-cover" />
-                      ) : (
-                        <div className="album-card-placeholder">
-                          <Music size={24} />
-                        </div>
-                      )}
-                      <div className="album-card-info">
-                        <span className="album-card-name">{group.name}</span>
-                        <span className="album-card-count">{group.tracks.length} 首</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* 普通列表模式 */
-            <TrackList
-              tracks={sortedLibTracks}
-              playingId={libCurrentTrackId}
-              onPlay={playTrack}
-              onDelete={handleDeleteLibTrack}
-            />
-          )}
-
-        </div>
+        <LibraryPage
+          search={libSearch}
+          onSearchChange={setLibSearch}
+          sortMode={libSortMode}
+          onSortModeChange={setLibSortMode}
+          sortedTracks={sortedLibTracks}
+          albumGroups={albumGroups}
+          currentPlaylist={currentPlaylist}
+          selectedAlbum={selectedAlbum}
+          onSelectAlbum={setSelectedAlbum}
+          playingTrackId={libCurrentTrackId}
+          onPlayTrack={playTrack}
+          onDeleteTrack={handleDeleteLibTrack}
+        />
       )}
 
       {/* 悬浮播放器 - 始终显示在底部 */}
